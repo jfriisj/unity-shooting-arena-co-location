@@ -41,8 +41,14 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
         private void Awake()
         {
+            Debug.Log("[ShootingSetupMotif] Awake - subscribing to events");
             FusionBBEvents.OnSceneLoadDone += OnNetworkLoaded;
             AvatarEntity.OnSpawned += OnAvatarSpawned;
+        }
+
+        private void Start()
+        {
+            Debug.Log($"[ShootingSetupMotif] Start - bulletPrefab: {(m_bulletPrefab != null ? m_bulletPrefab.name : "NULL")}, weaponPrefab: {(m_weaponPrefab != null ? m_weaponPrefab.name : "NULL")}");
         }
 
         private void OnDestroy()
@@ -58,11 +64,12 @@ namespace MRMotifs.SharedActivities.ShootingSample
             m_gameManager = FindAnyObjectByType<ShootingGameManagerMotif>();
             m_cameraRig = FindAnyObjectByType<OVRCameraRig>();
 
-            Debug.Log("[ShootingSetupMotif] Network loaded, ready to setup players");
+            Debug.Log($"[ShootingSetupMotif] Network loaded - runner: {networkRunner != null}, spawnManager: {m_spawnManager != null}, gameManager: {m_gameManager != null}");
         }
 
         private void OnAvatarSpawned(AvatarEntity avatarEntity)
         {
+            Debug.Log($"[ShootingSetupMotif] OnAvatarSpawned called! Entity: {avatarEntity?.gameObject.name}, isLocal: {avatarEntity?.IsLocal}");
             StartCoroutine(SetupShootingForAvatar(avatarEntity));
         }
 
@@ -70,6 +77,13 @@ namespace MRMotifs.SharedActivities.ShootingSample
         {
             // Wait for avatar to be fully ready
             yield return new WaitForSeconds(1.5f);
+
+            // Check if avatar was destroyed during wait (e.g., network disconnect)
+            if (avatarEntity == null || avatarEntity.gameObject == null)
+            {
+                Debug.LogWarning("[ShootingSetupMotif] Avatar was destroyed before setup completed");
+                yield break;
+            }
 
             var avatarNetworkObj = avatarEntity.gameObject.GetComponent<AvatarBehaviourFusion>();
             if (avatarNetworkObj == null)

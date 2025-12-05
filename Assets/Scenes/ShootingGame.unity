@@ -16247,7 +16247,7 @@ Transform:
   m_GameObject: {fileID: 1087084333}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 1, y: 1, z: 1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -17433,7 +17433,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!114 &1197271600
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17841,6 +17841,51 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6366ee97f6b541449155028b9487355a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!1 &1222601293
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1222601295}
+  - component: {fileID: 1222601294}
+  m_Layer: 0
+  m_Name: VoiceLogger
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1222601294
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1222601293}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a86f533fd9917dd4da8601e9eb542c96, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  LogLevel: 2
+--- !u!4 &1222601295
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1222601293}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1226872709
 GameObject:
   m_ObjectHideFlags: 0
@@ -18543,8 +18588,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_bulletPrefab: {fileID: 4316951302534558789, guid: 46b44dff8946e334db83420dee78d98f, type: 3}
   m_weaponPrefab: {fileID: 7443422031522743677, guid: f67231b349bfbb04b923d4f0ea60c2c5, type: 3}
-  m_weaponPositionOffset: {x: 0, y: -0.02, z: 0.08}
-  m_weaponRotationOffset: {x: -90, y: 0, z: 0}
+  m_weaponPositionOffset: {x: 0, y: -0.05, z: 0.08}
+  m_weaponRotationOffset: {x: 0, y: 0, z: 0}
   m_weaponScale: 0.8
 --- !u!1 &1264081467
 GameObject:
@@ -21377,7 +21422,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 721168592}
   m_HandleRect: {fileID: 721168591}
   m_Direction: 2
-  m_Value: 0
+  m_Value: 1
   m_Size: 1
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -23512,7 +23557,7 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1179041080}
   m_HandleRect: {fileID: 1179041079}
   m_Direction: 2
-  m_Value: 1.0000068
+  m_Value: 1.0000086
   m_Size: 0.8918122
   m_NumberOfSteps: 0
   m_OnValueChanged:
@@ -27594,7 +27639,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1926546158}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 33a38d73a8571ce438052dd31e09df5b, type: 3}
   m_Name: 
@@ -28852,6 +28897,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_useOpenPlayArea: 1
   objectOfInterest: {fileID: 2269899}
+  _OccupyingPlayers: []
 --- !u!4 &1971222172
 Transform:
   m_ObjectHideFlags: 0
@@ -29636,6 +29682,9 @@ MonoBehaviour:
   m_scoreEntryPrefab: {fileID: 371892540978354589, guid: e8af34d6984b9d24fb99244af34c7b92, type: 3}
   m_roundStartSound: {fileID: 0}
   m_roundEndSound: {fileID: 0}
+  _CurrentGameState: 0
+  _RemainingTime: 0
+  _CountdownValue: 0
 --- !u!1 &2021694051
 GameObject:
   m_ObjectHideFlags: 0
@@ -31321,3 +31370,4 @@ SceneRoots:
   - {fileID: 415999709}
   - {fileID: 1197271601}
   - {fileID: 1087084336}
+  - {fileID: 1222601295}
