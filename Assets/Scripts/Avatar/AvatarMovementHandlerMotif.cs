@@ -211,13 +211,26 @@ namespace MRMotifs.SharedActivities.Avatars
             m_hasObjectMoved = hasMoved;
         }
 
-        private void Update()
+        /// <summary>
+        /// Called every simulation tick for network state updates.
+        /// Sends local avatar position relative to object of interest.
+        /// </summary>
+        public override void FixedUpdateNetwork()
         {
-            if (m_hasObjectMoved)
+            // Always send avatar offset to keep remote avatars in sync with headset position
+            // This ensures avatars are always positioned at the VR headset location
+            if (m_localAvatar != null && m_localAvatar.Object != null)
             {
                 SendAvatarOffset();
             }
+        }
 
+        /// <summary>
+        /// Called every frame for visual updates.
+        /// Updates remote avatar positions for smooth interpolation.
+        /// </summary>
+        private void Update()
+        {
             UpdateRemoteAvatars();
         }
 

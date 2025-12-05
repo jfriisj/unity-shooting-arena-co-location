@@ -16,6 +16,11 @@ namespace MRMotifs.SharedActivities.ShootingSample
     [MetaCodeSample("MRMotifs-SharedActivities")]
     public class PlayerHealthMotif : NetworkBehaviour
     {
+        // Static configuration from ShootingGameConfigMotif
+        public static int ConfigMaxHealth = 100;
+        public static float ConfigRespawnDelay = 3f;
+        public static float ConfigInvulnerabilityDuration = 2f;
+
         [Header("Health Settings")]
         [Tooltip("Maximum health points.")]
         [SerializeField] private int m_maxHealth = 100;
@@ -106,6 +111,11 @@ namespace MRMotifs.SharedActivities.ShootingSample
         public override void Spawned()
         {
             base.Spawned();
+
+            // Apply static config if set
+            if (ConfigMaxHealth > 0) m_maxHealth = ConfigMaxHealth;
+            if (ConfigRespawnDelay > 0) m_respawnDelay = ConfigRespawnDelay;
+            if (ConfigInvulnerabilityDuration >= 0) m_invulnerabilityDuration = ConfigInvulnerabilityDuration;
 
             if (Object.HasStateAuthority)
             {

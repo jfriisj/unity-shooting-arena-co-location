@@ -1,0 +1,137 @@
+% \section{Experimental prototype}
+% Describe the specific use-case you worked with and the experimental prototype you have built.
+
+% \subsection{Equations}
+% This is an equation:
+% \begin{equation}
+% a+b=\gamma\label{eq}
+% \end{equation}
+
+% \begin{table}[htbp]
+% \caption{This is a table}
+% \begin{center}
+% \begin{tabular}{|c|c|c|c|}
+% \hline
+% \textbf{Table}&\multicolumn{3}{|c|}{\textbf{Table Column Head}} \\
+% \cline{2-4} 
+% \textbf{Head} & \textbf{Table column subhead}& \textbf{Subhead}& \textbf{Subhead} \\
+% \hline
+% text & text & text & text \\
+% \hline
+% \end{tabular}
+% \label{tab1}
+% \end{center}
+% \end{table}
+
+% \begin{figure}[htbp]
+% % \centerline{\includegraphics{fig1.png}}
+% \caption{Example of a figure caption.}
+% \label{fig}
+% \end{figure}
+% \section{Experimental prototype}
+% Describe the specific use-case you worked with and the experimental prototype you have built.
+
+% \subsection{Equations}
+% This is an equation:
+% \begin{equation}
+% a+b=\gamma\label{eq}
+% \end{equation}
+
+% \begin{table}[htbp]
+% \caption{This is a table}
+% \begin{center}
+% \begin{tabular}{|c|c|c|c|}
+% \hline
+% \textbf{Table}&\multicolumn{3}{|c|}{\textbf{Table Column Head}} \\
+% \cline{2-4} 
+% \textbf{Head} & \textbf{Table column subhead}& \textbf{Subhead}& \textbf{Subhead} \\
+% \hline
+% text & text & text & text \\
+% \hline
+% \end{tabular}
+% \label{tab1}
+% \end{center}
+% \end{table}
+
+% \begin{figure}[htbp]
+% % \centerline{\includegraphics{fig1.png}}
+% \caption{Example of a figure caption.}
+% \label{fig}
+% \end{figure}
+\section{Experimental Prototype}
+
+This section describes the implementation of the 3-user co-located VR training system using Meta Quest 3 headsets.
+
+\subsection{Hardware Configuration}
+
+The experimental testbed consists of:
+
+\begin{itemize}
+    \item \textbf{Headsets:} 3$\times$ Meta Quest 3
+    \begin{itemize}
+        \item Hand tracking: Optical tracking without controllers
+    \end{itemize}
+    
+    \item \textbf{Network Infrastructure:}
+    \begin{itemize}
+        \item WiFi access point
+        \item Dedicated router with QoS configuration
+    \end{itemize}
+    
+    %\item \textbf{Physical Space:} 6m $\times$ 6m padded training area with Guardian boundaries
+\end{itemize}
+
+\subsection{Software Architecture}
+
+The system is built on Unity 6000.0.62f1 with the following components:
+
+\begin{itemize}
+    \item \textbf{Meta XR SDK v81.0.0:} Core VR functionality, hand tracking, passthrough
+    \item \textbf{Photon Fusion 1.1.0:} State synchronization networking framework
+    \item \textbf{Universal Render Pipeline (URP):} Performance-optimized rendering
+    \item \textbf{Custom Building Blocks:}
+    \begin{itemize}
+        \item Colocation Manager: Spatial alignment and calibration
+        \item SSA Manager: Shared spatial anchors for persistent world
+        \item Avatar synchronization with NetworkBehaviour
+        \item MetricsLogger: Performance monitoring and CSV export
+    \end{itemize}
+\end{itemize}
+
+\subsection{Calibration Protocol}
+
+Spatial anchor-based alignment procedure:
+
+\begin{enumerate}
+    \item Host creates and shares spatial anchor using OVR Colocation Discovery API
+    \item Guest devices discover and localize the shared anchor
+    \item ColocationManager aligns each camera rig to anchor transform
+    \item System calculates alignment error as Euclidean distance from anchor position
+    \item Calibration error is continuously tracked and logged via MetricsLogger
+\end{enumerate}
+
+The system uses Meta's OVRSpatialAnchor API for alignment rather than manual hand tracking calibration, providing automatic spatial correspondence between co-located users.
+
+\subsection{Demo Scenarios}
+
+Three colocation demonstration scenes:
+
+\begin{description}
+    \item \textbf{ColocationDiscovery}: Demonstrates OVR Colocation Discovery API with shared spatial anchor creation, advertisement, discovery, and alignment between multiple headsets.
+    
+    \item \textbf{SpaceSharing}: Shows MRUK room sharing and colocation using spatial anchors to synchronize physical environment understanding across users.
+    
+    \item \textbf{SpatialAnchorsBasics}: Basic spatial anchor creation, persistence, and loading functionality.
+\end{description}
+
+\subsection{Data Collection}
+
+The MetricsLogger system captures:
+
+\begin{itemize}
+    \item \textbf{Technical metrics:} Frame rate, frame time, network RTT via Photon Fusion, calibration error from ColocationManager (1Hz sampling)
+    \item \textbf{Device metrics:} Battery level, battery temperature, estimated CPU usage, memory usage
+    \item \textbf{Session metadata:} Scenario type, interface type, environmental conditions, duration
+\end{itemize}
+
+Metrics are logged to CSV files with session metadata in JSON format, stored in the device's persistent data path for later retrieval and analysis.

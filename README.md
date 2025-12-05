@@ -398,6 +398,74 @@ NetworkRunner (Shared Mode)
 
 ---
 
+## 🔮 Future Architecture: Server-Authoritative with Global Anchors
+
+> **Branch for implementation:** `feature/server-authoritative-anchors`
+
+### Current Approach
+- Each headset aligns to a **shared spatial anchor** via colocation
+- Avatar positions are synced **relative to an "object of interest"**
+- All game logic runs on headsets via Photon Fusion (Shared Mode)
+
+### Proposed Architecture
+
+**1. Global Anchor(s) as Reference Frame**
+- More stable reference point, less drift over time
+- Multiple anchors for larger play areas (>3m from single anchor causes drift)
+- Better for persistent/long-running sessions
+- Pre-placed physical anchor markers (QR codes or known positions)
+
+**2. Local Server as Master Handler**
+- Offloads processing from headsets (tracking sync, game state, hit detection)
+- Better for longer runs - headsets thermal throttle over time
+- Single source of truth - less sync conflicts
+- Could run on a laptop, Raspberry Pi, or cloud server
+
+### Architecture Diagram
+```
+┌─────────────────────────────────────────────────────┐
+│                  Local Server                        │
+│  ┌─────────────────────────────────────────────┐    │
+│  │  Game State Manager (Authoritative)         │    │
+│  │  - Player positions (anchor-relative)       │    │
+│  │  - Hit detection                            │    │
+│  │  - Score tracking                           │    │
+│  │  - Round management                         │    │
+│  └─────────────────────────────────────────────┘    │
+│  ┌─────────────────────────────────────────────┐    │
+│  │  Anchor Registry                            │    │
+│  │  - Global anchor UUIDs                      │    │
+│  │  - Calibration data                         │    │
+│  └─────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────┘
+              │                    │
+              ▼                    ▼
+    ┌─────────────────┐  ┌─────────────────┐
+    │   Headset 1     │  │   Headset 2     │
+    │   - Tracking    │  │   - Tracking    │
+    │   - Rendering   │  │   - Rendering   │
+    │   - Input       │  │   - Input       │
+    │   - Anchor loc  │  │   - Anchor loc  │
+    └─────────────────┘  └─────────────────┘
+```
+
+### Key Technologies for Implementation
+- **Photon Fusion Server Mode** instead of Shared Mode
+- **Dedicated Server Build** running game logic
+- **Pre-placed physical anchor markers** (QR codes or known positions)
+- **Meta's Space Sharing API** for room-scale anchor sharing
+
+### Trade-offs
+| Aspect | Current (Shared Mode) | Future (Server Mode) |
+|--------|----------------------|---------------------|
+| Latency | Lower (peer-to-peer) | Higher (server round-trip) |
+| Headset Load | Higher | Lower |
+| Drift Handling | Per-session | Persistent calibration |
+| Scalability | 2-8 players | Many players |
+| Infrastructure | None | Server required |
+
+---
+
 ## 🔗 Dependencies
 
 | Package | Purpose |

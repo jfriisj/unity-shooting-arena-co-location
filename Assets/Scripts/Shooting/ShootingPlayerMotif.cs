@@ -16,6 +16,11 @@ namespace MRMotifs.SharedActivities.ShootingSample
     [MetaCodeSample("MRMotifs-SharedActivities")]
     public class ShootingPlayerMotif : MonoBehaviour
     {
+        // Static configuration from ShootingGameConfigMotif
+        public static float ConfigFireRate = 0.2f;
+        public static float ConfigBulletSpeed = 15f;
+        public static float ConfigBulletLifetime = 5f;
+
         [Header("Projectile Settings")]
         [Tooltip("The networked bullet prefab to spawn when shooting.")]
         [SerializeField] private NetworkObject m_bulletPrefab;
@@ -73,6 +78,11 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
         private void Start()
         {
+            // Apply static config
+            if (ConfigFireRate > 0) m_fireRate = ConfigFireRate;
+            if (ConfigBulletSpeed > 0) m_fireForce = ConfigBulletSpeed;
+            if (ConfigBulletLifetime > 0) m_bulletLifetime = ConfigBulletLifetime;
+
             m_cameraRig = FindAnyObjectByType<OVRCameraRig>();
             m_playerHealth = GetComponent<PlayerHealthMotif>();
             

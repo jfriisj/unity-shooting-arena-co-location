@@ -48,6 +48,9 @@ This project also integrates **HzOSDevMCP** for Meta Quest device management and
 4. **Validate changes**: Call `Console_GetLogs` after operations to catch errors
 5. **Create scripts only when needed**: For persistent behaviors, use `Script_CreateOrUpdate` with proper namespaces
 
+### ⚠️ CRITICAL: MCP Tool Usage Limitation
+**Only send ONE MCP tool request at a time.** The Unity MCP server can crash when multiple requests are sent simultaneously. Always wait for one MCP tool call to complete before invoking another. Do NOT call multiple `mcp_ai-game-devel_*` tools in parallel.
+
 ### MCP + MR Motifs Example Patterns
 ```csharp
 // When Script_Execute is needed, follow project conventions:

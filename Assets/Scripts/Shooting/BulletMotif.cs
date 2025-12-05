@@ -16,6 +16,9 @@ namespace MRMotifs.SharedActivities.ShootingSample
     [RequireComponent(typeof(Rigidbody))]
     public class BulletMotif : NetworkBehaviour
     {
+        // Static configuration from ShootingGameConfigMotif
+        public static int ConfigDamage = 10;
+
         [Header("Bullet Settings")]
         [Tooltip("Damage dealt on hit.")]
         [SerializeField] private int m_damage = 10;
@@ -54,6 +57,9 @@ namespace MRMotifs.SharedActivities.ShootingSample
             m_rigidbody = GetComponent<Rigidbody>();
             m_rigidbody.useGravity = false;
             m_rigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            
+            // Apply static config
+            if (ConfigDamage > 0) m_damage = ConfigDamage;
         }
 
         public override void Spawned()
