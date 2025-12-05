@@ -110,6 +110,18 @@ namespace MRMotifs.SharedActivities.ShootingSample
             Debug.Log("[ShootingPlayerMotif] Started - weapons spawned");
         }
 
+        private void OnDestroy()
+        {
+            // Restore controller visibility when this component is destroyed
+            ShowControllerModels();
+
+            // Clean up spawned audio source
+            if (m_spawnedAudioSource != null)
+            {
+                Destroy(m_spawnedAudioSource);
+            }
+        }
+
         private void SpawnWeaponModels()
         {
             if (m_weaponPrefab == null)
@@ -150,6 +162,82 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
                 m_leftMuzzle = FindMuzzlePoint(m_leftWeaponInstance);
                 Debug.Log($"[ShootingPlayerMotif] Left weapon spawned at {m_leftFirePoint.name}");
+            }
+
+            // Hide controller visuals since weapons are now visible
+            HideControllerModels();
+        }
+
+        private void HideControllerModels()
+        {
+            if (m_cameraRig == null) return;
+
+            // Hide controller models under the controller anchors
+            HideControllersInTransform(m_cameraRig.leftControllerAnchor);
+            HideControllersInTransform(m_cameraRig.rightControllerAnchor);
+            
+            // Also try the "InHand" anchors which some setups use
+            var leftInHand = m_cameraRig.leftHandAnchor?.Find("LeftControllerInHandAnchor");
+            var rightInHand = m_cameraRig.rightHandAnchor?.Find("RightControllerInHandAnchor");
+            if (leftInHand != null) HideControllersInTransform(leftInHand);
+            if (rightInHand != null) HideControllersInTransform(rightInHand);
+
+            Debug.Log("[ShootingPlayerMotif] Controller models hidden");
+        }
+
+        private void HideControllersInTransform(Transform parent)
+        {
+            if (parent == null) return;
+
+            foreach (Transform child in parent)
+            {
+                // Skip our spawned weapons
+                if (child.name == "LeftWeapon" || child.name == "RightWeapon") continue;
+
+                // Hide any renderers that aren't our weapons
+                var renderers = child.GetComponentsInChildren<Renderer>(true);
+                foreach (var renderer in renderers)
+                {
+                    // Check if this renderer is part of our weapon
+                    if (m_leftWeaponInstance != null && renderer.transform.IsChildOf(m_leftWeaponInstance.transform)) continue;
+                    if (m_rightWeaponInstance != null && renderer.transform.IsChildOf(m_rightWeaponInstance.transform)) continue;
+                    
+                    renderer.enabled = false;
+                }
+            }
+        }
+
+        private void ShowControllerModels()
+        {
+            if (m_cameraRig == null) return;
+
+            // Show controller models under the controller anchors
+            ShowControllersInTransform(m_cameraRig.leftControllerAnchor);
+            ShowControllersInTransform(m_cameraRig.rightControllerAnchor);
+            
+            // Also try the "InHand" anchors
+            var leftInHand = m_cameraRig.leftHandAnchor?.Find("LeftControllerInHandAnchor");
+            var rightInHand = m_cameraRig.rightHandAnchor?.Find("RightControllerInHandAnchor");
+            if (leftInHand != null) ShowControllersInTransform(leftInHand);
+            if (rightInHand != null) ShowControllersInTransform(rightInHand);
+
+            Debug.Log("[ShootingPlayerMotif] Controller models restored");
+        }
+
+        private void ShowControllersInTransform(Transform parent)
+        {
+            if (parent == null) return;
+
+            foreach (Transform child in parent)
+            {
+                // Skip our spawned weapons (they'll be destroyed separately)
+                if (child.name == "LeftWeapon" || child.name == "RightWeapon") continue;
+
+                var renderers = child.GetComponentsInChildren<Renderer>(true);
+                foreach (var renderer in renderers)
+                {
+                    renderer.enabled = true;
+                }
             }
         }
 

@@ -12386,6 +12386,7 @@ GameObject:
   - component: {fileID: 792554051}
   - component: {fileID: 792554050}
   - component: {fileID: 792554049}
+  - component: {fileID: 792554054}
   m_Layer: 0
   m_Name: '[BuildingBlock] Camera Rig'
   m_TagString: Untagged
@@ -12549,6 +12550,19 @@ Transform:
   - {fileID: 2269900}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &792554054
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 792554048}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a01856f7e9644a1429ad3e5985199c93, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_suppressBoundary: 1
 --- !u!1 &794278066
 GameObject:
   m_ObjectHideFlags: 0
@@ -18588,8 +18602,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_bulletPrefab: {fileID: 4316951302534558789, guid: 46b44dff8946e334db83420dee78d98f, type: 3}
   m_weaponPrefab: {fileID: 7443422031522743677, guid: f67231b349bfbb04b923d4f0ea60c2c5, type: 3}
-  m_weaponPositionOffset: {x: 0, y: -0.05, z: 0.08}
-  m_weaponRotationOffset: {x: 0, y: 0, z: 0}
+  m_weaponPositionOffset: {x: 0, y: -0.03, z: 0.02}
+  m_weaponRotationOffset: {x: 0, y: 180, z: 0}
   m_weaponScale: 0.8
 --- !u!1 &1264081467
 GameObject:
