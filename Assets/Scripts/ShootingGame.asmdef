@@ -1,0 +1,27 @@
+{
+    "name": "ShootingGame",
+    "rootNamespace": "ShootingGame",
+    "references": [
+        "Fusion.Unity",
+        "Fusion.Runtime",
+        "Meta.XR.MultiplayerBlocks.Fusion",
+        "Meta.XR.MultiplayerBlocks.Shared",
+        "Oculus.AvatarSDK2",
+        "Unity.TextMeshPro",
+        "Oculus.VR",
+        "Oculus.Platform",
+        "Oculus.Interaction",
+        "meta.xr.mrutilitykit"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [
+        "FUSION2"
+    ],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

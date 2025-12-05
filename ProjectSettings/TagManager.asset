@@ -1,0 +1,70 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!78 &1
+TagManager:
+  serializedVersion: 3
+  tags:
+  - Portal
+  - QDSUIBorderlessButton
+  - QDSUIToggleButton
+  - QDSUISecondaryButton
+  - QDSUISharedThemeColor
+  - QDSUIAccentColor
+  - QDSUIIcon
+  - QDSUITooltip
+  - QDSUITextSecondaryColor
+  - QDSUIToggleBorderlessButton
+  - QDSUISection
+  - QDSUIPrimaryButton
+  - QDSUITextSecondaryInvertedColor
+  - QDSUITextInvertedColor
+  - QDSUIDestructiveButton
+  - QDSUIBackplateGradient
+  - QDSUIToggleSwitch
+  - Locomotion
+  - LocoButton
+  - LocoText
+  - PassThroughButton
+  - PassThrough
+  - QDSUITextInputField
+  - SamplesInfoPanel
+  - QDSUIToggleCheckboxRadio
+  layers:
+  - Default
+  - TransparentFX
+  - Ignore Raycast
+  - Overlay UI
+  - Water
+  - UI
+  - MRUK
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - XR Simulation
+  - 
+  m_SortingLayers:
+  - name: Default
+    uniqueID: 0
+    locked: 0
+  m_RenderingLayers:
+  - Default
