@@ -78,6 +78,11 @@ namespace MRMotifs.SharedActivities.Avatars
 
         private void FreeSpawnLocation(NetworkRunner runner, PlayerRef player)
         {
+            if (spawnManagerMotif == null)
+            {
+                return;
+            }
+
             for (var i = 0; i < spawnManagerMotif.OccupyingPlayers.Length; i++)
             {
                 if (spawnManagerMotif.OccupyingPlayers.Get(i) != player)

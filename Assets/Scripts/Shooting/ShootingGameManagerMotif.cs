@@ -26,6 +26,12 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [Tooltip("Minimum players required to start.")]
         [SerializeField] private int m_minPlayersToStart = 2;
 
+        [Tooltip("Delay before automatically starting a new round after round end.")]
+        [SerializeField] private float m_autoRestartDelay = 10f;
+
+        [Tooltip("Whether to automatically restart rounds.")]
+        [SerializeField] private bool m_autoRestart = true;
+
         [Header("UI References")]
         [Tooltip("UI panel showing the scoreboard.")]
         [SerializeField] private GameObject m_scoreboardPanel;
@@ -89,6 +95,9 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private readonly Dictionary<PlayerRef, GameObject> m_scoreEntries = new();
         private AudioSource m_audioSource;
         private bool m_hasSpawned;
+        private float m_roundEndTime;
+        private float m_restartHoldTime;
+        private const float RESTART_HOLD_DURATION = 2f; // Hold both grips for 2 seconds to restart
 
         public override void Spawned()
         {
@@ -111,6 +120,55 @@ namespace MRMotifs.SharedActivities.ShootingSample
             RefreshPlayerList();
 
             UpdateUI();
+        }
+
+        private void Update()
+        {
+            // Check for restart input (hold both grip buttons)
+            CheckRestartInput();
+            
+            // Update restart countdown display during RoundEnd
+            if (CurrentGameState == GameState.RoundEnd && m_autoRestart && m_statusText != null)
+            {
+                float timeRemaining = (m_roundEndTime + m_autoRestartDelay) - Time.time;
+                if (timeRemaining > 0)
+                {
+                    // Update the countdown text
+                    var baseText = m_statusText.text.Split('\n')[0];
+                    m_statusText.text = $"{baseText}\nNew round in {Mathf.CeilToInt(timeRemaining)}s...";
+                }
+            }
+        }
+
+        private void CheckRestartInput()
+        {
+            // Hold both grip buttons to restart (works in RoundEnd state)
+            bool leftGrip = OVRInput.Get(OVRInput.Button.PrimaryHandTrigger, OVRInput.Controller.LTouch);
+            bool rightGrip = OVRInput.Get(OVRInput.Button.PrimaryHandTrigger, OVRInput.Controller.RTouch);
+
+            if (leftGrip && rightGrip)
+            {
+                m_restartHoldTime += Time.deltaTime;
+
+                if (m_restartHoldTime >= RESTART_HOLD_DURATION)
+                {
+                    m_restartHoldTime = 0f;
+                    
+                    if (CurrentGameState == GameState.RoundEnd)
+                    {
+                        RestartRound();
+                    }
+                    else if (CurrentGameState == GameState.Playing)
+                    {
+                        // During gameplay, reset the round
+                        ResetCurrentRound();
+                    }
+                }
+            }
+            else
+            {
+                m_restartHoldTime = 0f;
+            }
         }
 
         public override void FixedUpdateNetwork()
@@ -136,7 +194,11 @@ namespace MRMotifs.SharedActivities.ShootingSample
                     break;
 
                 case GameState.RoundEnd:
-                    // Wait for host to start new round
+                    // Auto-restart after delay if enabled
+                    if (m_autoRestart && Time.time >= m_roundEndTime + m_autoRestartDelay)
+                    {
+                        RestartRound();
+                    }
                     break;
             }
 
@@ -240,7 +302,8 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private void EndRound(PlayerRef winner)
         {
             CurrentGameState = GameState.RoundEnd;
-            AnnounceWinnerRpc(winner);
+            m_roundEndTime = Time.time;
+            AnnounceWinnerRpc(winner, m_autoRestart ? m_autoRestartDelay : -1f);
             PlaySoundRpc(false);
         }
 
@@ -261,13 +324,20 @@ namespace MRMotifs.SharedActivities.ShootingSample
         }
 
         [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-        private void AnnounceWinnerRpc(PlayerRef winner)
+        private void AnnounceWinnerRpc(PlayerRef winner, float restartDelay)
         {
             if (m_statusText != null)
             {
-                m_statusText.text = winner == PlayerRef.None 
+                var winnerText = winner == PlayerRef.None 
                     ? "Time's Up! Round Over" 
                     : $"Player {winner.PlayerId} Wins!";
+                
+                if (restartDelay > 0)
+                {
+                    winnerText += $"\nNew round in {restartDelay:F0}s...";
+                }
+                
+                m_statusText.text = winnerText;
             }
         }
 
@@ -289,10 +359,111 @@ namespace MRMotifs.SharedActivities.ShootingSample
         /// </summary>
         public void RestartRound()
         {
-            if (Object.HasStateAuthority)
+            if (!Object.HasStateAuthority)
             {
-                RefreshPlayerList();
+                // If not host, request restart via RPC
+                RequestRestartRpc();
+                return;
+            }
+
+            Debug.Log("[ShootingGameManager] Restarting round...");
+            
+            // Reset all player stats
+            RefreshPlayerList();
+            foreach (var player in m_players)
+            {
+                if (player != null && player.Object != null && player.Object.IsValid)
+                {
+                    player.ResetStats();
+                }
+            }
+
+            // Announce restart to all clients
+            OnRoundRestartRpc();
+
+            // Start countdown for new round
+            StartCountdown();
+        }
+
+        /// <summary>
+        /// Force reset the current round without ending it (emergency reset).
+        /// </summary>
+        public void ResetCurrentRound()
+        {
+            if (!Object.HasStateAuthority)
+            {
+                RequestResetRpc();
+                return;
+            }
+
+            Debug.Log("[ShootingGameManager] Resetting current round...");
+            
+            // Reset timer
+            RemainingTime = m_roundDuration;
+
+            // Reset all player stats but keep playing
+            RefreshPlayerList();
+            foreach (var player in m_players)
+            {
+                if (player != null && player.Object != null && player.Object.IsValid)
+                {
+                    player.ResetStats();
+                }
+            }
+
+            // Announce reset
+            OnRoundResetRpc();
+
+            // If not already playing, start countdown
+            if (CurrentGameState != GameState.Playing)
+            {
                 StartCountdown();
+            }
+        }
+
+        /// <summary>
+        /// RPC for clients to request a round restart from the host.
+        /// </summary>
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+        private void RequestRestartRpc()
+        {
+            Debug.Log("[ShootingGameManager] Restart requested by client");
+            RestartRound();
+        }
+
+        /// <summary>
+        /// RPC for clients to request a round reset from the host.
+        /// </summary>
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+        private void RequestResetRpc()
+        {
+            Debug.Log("[ShootingGameManager] Reset requested by client");
+            ResetCurrentRound();
+        }
+
+        /// <summary>
+        /// Notify all clients that the round is restarting.
+        /// </summary>
+        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+        private void OnRoundRestartRpc()
+        {
+            Debug.Log("[ShootingGameManager] Round restarting...");
+            if (m_statusText != null)
+            {
+                m_statusText.text = "New Round Starting...";
+            }
+        }
+
+        /// <summary>
+        /// Notify all clients that the round has been reset.
+        /// </summary>
+        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+        private void OnRoundResetRpc()
+        {
+            Debug.Log("[ShootingGameManager] Round reset!");
+            if (m_statusText != null)
+            {
+                m_statusText.text = "Round Reset!";
             }
         }
 

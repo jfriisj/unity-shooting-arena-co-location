@@ -1,6 +1,7 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
 
 #if FUSION2
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -59,30 +60,35 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private float m_respawnTimer;
         private bool m_isRespawning;
 
-        private void Start()
+        private IEnumerator Start()
         {
-            // Find local player's health component
-            var players = FindObjectsByType<PlayerHealthMotif>(FindObjectsSortMode.None);
-            foreach (var player in players)
+            // Wait for local player's health component to be spawned
+            while (m_playerHealth == null)
             {
-                if (player.Object != null && player.Object.HasStateAuthority)
+                var players = FindObjectsByType<PlayerHealthMotif>(FindObjectsSortMode.None);
+                foreach (var player in players)
                 {
-                    m_playerHealth = player;
-                    break;
+                    if (player.Object != null && player.Object.HasStateAuthority)
+                    {
+                        m_playerHealth = player;
+                        break;
+                    }
+                }
+
+                if (m_playerHealth == null)
+                {
+                    yield return new WaitForSeconds(0.1f);
                 }
             }
 
-            if (m_playerHealth != null)
-            {
-                m_playerHealth.OnHealthUpdated += UpdateHealth;
-                m_playerHealth.OnScoreUpdated += UpdateScore;
-                m_playerHealth.OnPlayerDied += OnPlayerDied;
-                m_playerHealth.OnPlayerRespawned += OnPlayerRespawned;
+            m_playerHealth.OnHealthUpdated += UpdateHealth;
+            m_playerHealth.OnScoreUpdated += UpdateScore;
+            m_playerHealth.OnPlayerDied += OnPlayerDied;
+            m_playerHealth.OnPlayerRespawned += OnPlayerRespawned;
 
-                // Initialize UI
-                UpdateHealth(m_playerHealth.CurrentHealth, 100);
-                UpdateScore(m_playerHealth.Kills, m_playerHealth.Deaths);
-            }
+            // Initialize UI
+            UpdateHealth(m_playerHealth.CurrentHealth, 100);
+            UpdateScore(m_playerHealth.Kills, m_playerHealth.Deaths);
 
             // Hide markers initially
             if (m_hitMarker != null)

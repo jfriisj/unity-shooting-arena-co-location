@@ -187,7 +187,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
             // Award kill to attacker
             if (killer != PlayerRef.None)
             {
-                AwardKillRpc(killer);
+                AwardKillToPlayer(killer);
             }
 
             // Broadcast death
@@ -197,19 +197,25 @@ namespace MRMotifs.SharedActivities.ShootingSample
             _ = StartCoroutine(RespawnAfterDelay());
         }
 
-        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-        private void AwardKillRpc(PlayerRef killer)
+        private void AwardKillToPlayer(PlayerRef killer)
         {
-            // Find the killer's PlayerHealthMotif and increment their kills
+            // Find the killer's PlayerHealthMotif and request kill increment on their state authority
             var players = FindObjectsByType<PlayerHealthMotif>(FindObjectsSortMode.None);
             foreach (var player in players)
             {
-                if (player.OwnerPlayer == killer && player.Object.HasStateAuthority)
+                if (player.OwnerPlayer == killer)
                 {
-                    player.Kills++;
+                    player.IncrementKillsRpc();
                     break;
                 }
             }
+        }
+
+        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+        public void IncrementKillsRpc()
+        {
+            // Only state authority modifies the networked Kills property
+            Kills++;
         }
 
         [Rpc(RpcSources.StateAuthority, RpcTargets.All)]

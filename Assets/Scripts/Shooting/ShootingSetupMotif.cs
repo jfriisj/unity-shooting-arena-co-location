@@ -85,13 +85,9 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 yield break;
             }
 
-            var avatarNetworkObj = avatarEntity.gameObject.GetComponent<AvatarBehaviourFusion>();
-            if (avatarNetworkObj == null)
-            {
-                yield break;
-            }
-
-            bool isLocalPlayer = avatarNetworkObj.HasStateAuthority;
+            // Use AvatarEntity.IsLocal to correctly identify the local player
+            // HasStateAuthority only returns true for host, not for all local players
+            bool isLocalPlayer = avatarEntity.IsLocal;
             
             Debug.Log($"[ShootingSetupMotif] Setting up avatar - IsLocal: {isLocalPlayer}");
 
