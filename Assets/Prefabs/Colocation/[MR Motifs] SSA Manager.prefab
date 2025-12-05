@@ -9,8 +9,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6859835874536822899}
-  - component: {fileID: 6363780838276176678}
   - component: {fileID: 7121571860471547849}
+  - component: {fileID: 5001344626819842674}
   m_Layer: 0
   m_Name: '[MR Motifs] SSA Manager'
   m_TagString: Untagged
@@ -33,22 +33,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &6363780838276176678
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4752380042313195190}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e920b837d13d3324b8911058b2261287, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_anchorPlacementMode: 1
-  m_placementButton: 1
-  m_placementIndicatorPrefab: {fileID: 0}
-  colocationManager: {fileID: 0}
 --- !u!114 &7121571860471547849
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -66,5 +50,20 @@ MonoBehaviour:
   Flags: 131073
   NestedObjects: []
   NetworkedBehaviours:
-  - {fileID: 6363780838276176678}
+  - {fileID: 5001344626819842674}
   ForceRemoteRenderTimeframe: 0
+--- !u!114 &5001344626819842674
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4752380042313195190}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c2f48e9893725cd49bac389d394c65ce, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_anchorPlacementMode: 1
+  m_placementButton: 8192
+  m_placementIndicatorPrefab: {fileID: 0}

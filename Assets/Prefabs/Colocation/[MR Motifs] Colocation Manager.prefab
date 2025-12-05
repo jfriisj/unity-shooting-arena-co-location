@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5950835091866386242}
-  - component: {fileID: 3008130272962581572}
+  - component: {fileID: 6430161781014502031}
   m_Layer: 0
   m_Name: '[MR Motifs] Colocation Manager'
   m_TagString: Untagged
@@ -32,7 +32,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &3008130272962581572
+--- !u!114 &6430161781014502031
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -41,7 +41,6 @@ MonoBehaviour:
   m_GameObject: {fileID: 1328995008527075271}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 25aa4d1516aa5834899ad1b0a87bd634, type: 3}
+  m_Script: {fileID: 11500000, guid: 6ac7ba9cffbc14849b488071f9dd45f5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  sharedSpatialAnchorManager: {fileID: 0}

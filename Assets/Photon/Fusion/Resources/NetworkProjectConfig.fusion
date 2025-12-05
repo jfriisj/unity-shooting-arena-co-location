@@ -36,8 +36,8 @@
         "ReliableDataTransferModes": 3
     },
     "HostMigration": {
-        "EnableAutoUpdate": false,
-        "UpdateDelay": 10
+        "EnableAutoUpdate": true,
+        "UpdateDelay": 5
     },
     "EncryptionConfig": {
         "EnableEncryption": false
@@ -70,7 +70,8 @@
         "Fusion.Addons.FSM",
         "Meta.XR.MultiplayerBlocks.Fusion",
         "Meta.XR.MultiplayerBlocks.Fusion",
-        "PhotonVoice.Fusion"
+        "PhotonVoice.Fusion",
+        "ShootingGame"
     ],
     "UseSerializableDictionary": true,
     "NullChecksForNetworkedProperties": true,

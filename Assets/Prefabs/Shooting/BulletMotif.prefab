@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 4778622842165058431}
   - component: {fileID: 4316951302534558789}
   - component: {fileID: 3315173510238888226}
-  - component: {fileID: 5342529142367892911}
+  - component: {fileID: 2338309738527079604}
   m_Layer: 0
   m_Name: BulletMotif
   m_TagString: Untagged
@@ -156,7 +156,7 @@ MonoBehaviour:
   Flags: 262145
   NestedObjects: []
   NetworkedBehaviours:
-  - {fileID: 5342529142367892911}
+  - {fileID: 2338309738527079604}
   ForceRemoteRenderTimeframe: 0
 --- !u!96 &3315173510238888226
 TrailRenderer:
@@ -274,7 +274,7 @@ TrailRenderer:
   m_Autodestruct: 0
   m_Emitting: 1
   m_ApplyActiveColorSpace: 1
---- !u!114 &5342529142367892911
+--- !u!114 &2338309738527079604
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -283,10 +283,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 4170924974484475727}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 734fb429d760b7040922ef60dd495a07, type: 3}
+  m_Script: {fileID: 11500000, guid: d92a305becee47844bcc193410073536, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  damage: 10
-  hitEffectPrefab: {fileID: 0}
-  trailRenderer: {fileID: 0}
-  hitSound: {fileID: 0}
+  m_damage: 10
+  m_hitEffectPrefab: {fileID: 0}
+  m_trailRenderer: {fileID: 0}
+  m_hitSound: {fileID: 0}

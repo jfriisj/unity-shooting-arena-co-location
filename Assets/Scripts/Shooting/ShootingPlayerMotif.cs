@@ -41,10 +41,10 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [SerializeField] private GameObject m_weaponPrefab;
 
         [Tooltip("Position offset for the weapon relative to the controller.")]
-        [SerializeField] private Vector3 m_weaponPositionOffset = new Vector3(0f, -0.02f, 0.08f);
+        [SerializeField] private Vector3 m_weaponPositionOffset = new Vector3(0f, 0f, 0.05f);
 
         [Tooltip("Rotation offset for the weapon relative to the controller (Euler angles).")]
-        [SerializeField] private Vector3 m_weaponRotationOffset = new Vector3(-90f, 0f, 0f);
+        [SerializeField] private Vector3 m_weaponRotationOffset = new Vector3(0f, 180f, 0f);
 
         [Tooltip("Scale of the weapon model.")]
         [SerializeField] private float m_weaponScale = 0.8f;
