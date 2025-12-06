@@ -166,7 +166,7 @@ TrailRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4170924974484475727}
-  m_Enabled: 1
+  m_Enabled: 0
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -287,6 +287,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_damage: 10
-  m_hitEffectPrefab: {fileID: 0}
+  m_hitEffectPrefab: {fileID: 6151908392494861471, guid: 1c0d64f152cd2b342b15c8b7d6ad5c9b, type: 3}
   m_trailRenderer: {fileID: 0}
   m_hitSound: {fileID: 0}

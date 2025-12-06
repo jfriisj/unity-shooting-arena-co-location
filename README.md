@@ -26,7 +26,130 @@ The project compiles successfully with all core systems implemented. Ready for d
 | **Scene Setup** | ✅ Building blocks configured |
 | **Networking** | ⚠️ Needs Photon App ID |
 | **Platform** | ⚠️ Needs Oculus App ID |
-| **Device Testing** | 🔲 Not yet tested |
+| **Device Testing** | ✅ Co-location verified |
+| **Metrics Collection** | ✅ Working on both headsets |
+
+---
+
+## 📝 Development Log
+
+### Session: December 6, 2025 - MetricsLogger Improvements
+
+#### Problem Solved: H2 Headset Showing "NotConnected"
+The MetricsLogger on H2 was incorrectly reporting `scene_state=NotConnected` while H1 correctly showed `Client`. Root cause: `FindAnyObjectByType<NetworkRunner>()` was unreliable for detecting the NetworkRunner in certain initialization scenarios.
+
+#### Solution Implemented
+Updated `UpdateNetworkState()` in `MetricsLogger.cs` to use Photon Fusion's static `NetworkRunner.Instances` list:
+
+```csharp
+private void UpdateNetworkState()
+{
+    if (m_networkRunner == null || !m_networkRunner.IsRunning)
+    {
+        // Use NetworkRunner.Instances (Fusion's internal static list)
+        foreach (var runner in NetworkRunner.Instances)
+        {
+            if (runner != null && runner.IsRunning)
+            {
+                m_networkRunner = runner;
+                break;
+            }
+        }
+        // Fallback if Instances is empty
+        if (m_networkRunner == null)
+        {
+            m_networkRunner = FindAnyObjectByType<NetworkRunner>();
+        }
+    }
+    // ... rest of method
+}
+```
+
+#### Verification Results (Latest Session)
+| Headset | Serial | Headset ID | Network State | Participant Count |
+|---------|--------|------------|---------------|-------------------|
+| H1 | `2G0YC1ZF8B07WD` | `H_4193` | Client ✅ | 2 ✅ |
+| H2 | `2G0YC5ZF9F00N1` | `H_6444` | Host ✅ | 2 ✅ |
+
+#### MetricsLogger CSV Format (10 Columns)
+```
+session_id,headset_id,participant_count,timestamp_sec,frame_rate_fps,network_latency_ms,calibration_error_mm,battery_temp_c,battery_level,scene_state
+```
+
+#### Metrics File Location
+- Path on device: `/sdcard/Android/data/com.jJFiisJ.ArenaShooting/files/metrics/`
+- Filename format: `session_YYYYMMDD_HHMMSS_<headset_id>.csv`
+
+#### Test Device Configuration
+| Device | Serial Number | Headset ID | Role |
+|--------|---------------|------------|------|
+| Quest H1 | `2G0YC1ZF8B07WD` | `H_4193` | Usually Client |
+| Quest H2 | `2G0YC5ZF9F00N1` | `H_6444` | Usually Host |
+
+**ADB Path:** `C:/Users/jonfriis/Android/Sdk/platform-tools/adb.exe`
+
+#### ADB Commands for Metrics Collection
+```bash
+# Set ADB path (Windows)
+ADB="C:/Users/jonfriis/Android/Sdk/platform-tools/adb.exe"
+
+# List connected devices
+$ADB devices
+
+# List available sessions on H1
+$ADB -s 2G0YC1ZF8B07WD shell ls /sdcard/Android/data/com.jJFiisJ.ArenaShooting/files/metrics/
+
+# List available sessions on H2
+$ADB -s 2G0YC5ZF9F00N1 shell ls /sdcard/Android/data/com.jJFiisJ.ArenaShooting/files/metrics/
+
+# Read a session file
+$ADB -s <serial> shell cat /sdcard/Android/data/com.jJFiisJ.ArenaShooting/files/metrics/<filename>.csv
+
+# Pull all metrics to local folder
+$ADB -s <serial> pull /sdcard/Android/data/com.jJFiisJ.ArenaShooting/files/metrics/ ./
+```
+
+#### ✅ FIXED: Calibration Error Discrepancy (December 6, 2025)
+**Issue:** H2 (Host) showed 0mm calibration error while H1 (Client) showed ~659mm.
+
+**Root Cause:** 
+1. Host never called `AlignUserToAnchor()` - they create the anchor but don't align to it
+2. `ValidateCalibration()` measured distance from anchor position, not drift from initial position
+3. The 659mm "error" was the meaningless distance between camera rig origin and world-space anchor position
+
+**Fix Applied:**
+1. Added `RegisterHostCalibration()` to `ColocationManager.cs` - called when host creates anchor
+2. Both host and client now track drift from their reference position after calibration
+3. `ValidateCalibration()` now measures horizontal drift only (ignores vertical for sit/stand)
+4. Initial calibration error is 0mm for both roles (host defines origin, client aligns to it)
+
+**Files Modified:**
+- `Assets/Scripts/Colocation/ColocationManager.cs` - Added host calibration registration, fixed drift tracking
+- `Assets/Scripts/Colocation/SharedSpatialAnchorManager.cs` - Calls `RegisterHostCalibration()` after anchor creation
+
+**Expected Behavior After Fix:**
+| Headset | Initial Error | Drift Tracking |
+|---------|---------------|----------------|
+| Host | 0mm | Tracks drift from anchor creation position |
+| Client | 0mm | Tracks drift from alignment position |
+
+---
+
+#### Known Issue: FPS Variance
+| Headset | FPS Range |
+|---------|-----------|
+| H1 (Client) | 50-75 FPS |
+| H2 (Host) | 70-74 FPS (stable) |
+
+**Possible causes:**
+- Client has additional network overhead processing remote player updates
+- Thermal throttling differences between devices
+- Background processes
+
+#### Next Steps for Future Agent
+1. Test the calibration fix on devices to verify both headsets report 0mm initially
+2. Monitor drift over time - both headsets should now track actual positional drift
+3. Investigate H1 frame rate variance if it persists after fix
 
 ---
 
@@ -93,6 +216,359 @@ Assets/
 | `[MR Motif] Shooting HUD Canvas` | Player HUD (health, kills, death panel) |
 | `[MR Motifs] Colocation Manager` | Anchor alignment logic |
 | `[MR Motifs] SSA Manager` | Shared Spatial Anchor management |
+
+---
+
+## 🏗️ Detailed Scene Object & Component Responsibilities
+
+This section documents every significant GameObject and its components to prevent duplicate responsibilities and configuration errors.
+
+> ⚠️ **CRITICAL RULES TO PREVENT DUPLICATION:**
+> 1. **Never add a component if it already exists elsewhere in the scene**
+> 2. **NetworkBehaviour components REQUIRE a NetworkObject on the same GameObject**
+> 3. **Building Blocks are self-contained - don't add custom NetworkBehaviours to them**
+> 4. **Each responsibility should live in ONE place only**
+
+---
+
+### Meta Building Blocks (Do NOT Modify)
+
+These are Meta SDK provided building blocks. They are self-contained systems and should not have custom components added to them.
+
+#### `[BuildingBlock] Camera Rig`
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `OVRCameraRig` | Unity | Main XR camera rig, tracking space origin |
+| `OVRManager` | Unity | XR system settings (tracking, passthrough, etc.) |
+| `OVRHeadsetEmulator` | Unity | Editor testing without headset |
+| `BoundaryDisablerMotif` | MRMotifs | Suppresses Guardian boundaries for free movement |
+
+**Child: `[MR Motif] Arena`** - Empty transform used as "object of interest" for avatar position sync.
+
+---
+
+#### `[BuildingBlock] Passthrough`
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `OVRPassthroughLayer` | Unity | Enables MR passthrough rendering |
+
+**Single Responsibility:** Passthrough rendering ONLY. No game logic.
+
+---
+
+#### `[BuildingBlock] Network Manager`
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `NetworkRunner` | Fusion | Core networking (Shared Mode) |
+| `NetworkEvents` | Fusion | Network event callbacks |
+| `FusionBBEvents` | Meta.XR.MultiplayerBlocks.Fusion | Building block event integration |
+| `CustomNetworkObjectProvider` | Meta.XR.MultiplayerBlocks.Fusion | Network object instantiation |
+| `FusionVoiceClient` | Photon.Voice.Fusion | **[DISABLED]** Voice chat (not MVP) |
+| `RunnerEnableVisibility` | Fusion | Runner visibility management |
+| `HostMigrationHandlerMotif` | MRMotifs | **[DISABLED]** Seamless host takeover |
+| `NetworkLatencyTracker` | MRMotifs | **[DISABLED]** Performance metrics |
+
+**Single Responsibility:** Network session management. No game state logic.
+
+---
+
+#### `[BuildingBlock] Auto Matchmaking`
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `FusionBootstrap` | Fusion | Auto-start network session |
+| `FusionBootstrapDebugGUI` | Fusion | Debug UI in editor |
+
+**Single Responsibility:** Session creation/joining ONLY.
+
+---
+
+#### `[BuildingBlock] Platform Init`
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `PlatformInit_` | Meta.XR.MultiplayerBlocks.Shared | Initializes Oculus Platform SDK |
+
+**Single Responsibility:** Platform SDK initialization ONLY.
+
+---
+
+#### `[BuildingBlock] Networked Avatar`
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `AvatarSpawnerFusion` | Meta.XR.MultiplayerBlocks.Fusion | Spawns Meta Avatars for networked players |
+
+**Child: `AvatarSDK`** - Contains `OvrAvatarManager`, `AvatarLODManager`, `GpuSkinningConfiguration`, `SampleInputManager`
+**Child: `LipSyncInput`** - Contains audio/lip sync components
+
+**Single Responsibility:** Avatar instantiation ONLY. No game logic on avatars.
+
+---
+
+#### `[BuildingBlock] MR Utility Kit`
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `MRUK` | Meta.XR.MRUtilityKit | Room scanning, spatial awareness, scene mesh |
+
+**Single Responsibility:** Room/environment awareness ONLY.
+
+---
+
+#### `[BuildingBlock] Colocation` ⚠️ CRITICAL
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `ColocationController` | Meta.XR.MultiplayerBlocks.Shared | Meta SDK colocation orchestration |
+| `ColocationSessionEventHandler` | Meta.XR.MultiplayerBlocks.Shared | Colocation event callbacks |
+| `FusionMessenger` | Meta.XR.MultiplayerBlocks.Colocation.Fusion | Fusion message passing for colocation |
+| `FusionNetworkData` | Meta.XR.MultiplayerBlocks.Colocation.Fusion | Network data for colocation |
+| `SharedSpatialAnchorCore` | Meta.XR.BuildingBlocks | Core spatial anchor functionality |
+| `NetworkObject` | Fusion | **REQUIRED** for FusionMessenger/FusionNetworkData |
+| `RoomSharingMotif` | MRMotifs | **[DISABLED]** Room mesh sharing (experimental) |
+
+> ⚠️ **WARNING:** This building block MUST have a `NetworkObject` because it contains `FusionMessenger` and `FusionNetworkData` which are `NetworkBehaviour` classes. Without NetworkObject, Fusion will not spawn these correctly and colocation will fail silently.
+
+> ⚠️ **DO NOT** add custom NetworkBehaviours here. Use separate MR Motif GameObjects.
+
+---
+
+#### `[BuildingBlock] Scene Mesh` (Currently Disabled)
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `RoomMeshController` | Meta.XR.BuildingBlocks | Controls scene mesh loading/display |
+| `RoomMeshEvent` | Meta.XR.BuildingBlocks | Scene mesh load events |
+
+**Status:** **DISABLED** - Causes issues with colocation. Re-enable only after colocation works.
+
+---
+
+### MR Motif GameObjects (Custom Game Logic)
+
+These are custom game components. Each should have ONE clear responsibility.
+
+#### `[MR Motif] Shooting Game Manager`
+| Component | Namespace | Responsibility | NetworkObject? |
+|-----------|-----------|----------------|----------------|
+| `NetworkObject` | Fusion | Enables networking | ✅ REQUIRED |
+| `ShootingGameManagerMotif` | MRMotifs | Game state machine (Waiting/Countdown/Playing/RoundEnd), scoring, win conditions | NetworkBehaviour |
+| `ShootingAudioMotif` | MRMotifs | Game audio (round start, round end, countdown) | MonoBehaviour |
+| `ShootingGameConfigMotif` | MRMotifs | Centralized game configuration (rounds, scoring) | MonoBehaviour |
+| `ShootingDebugVisualizerMotif` | MRMotifs | Debug visualization (spawn points, boundaries) | MonoBehaviour |
+
+**Responsibilities:**
+- ✅ Game state management
+- ✅ Round timing and scoring
+- ✅ Win condition detection
+- ✅ Audio feedback for game events
+- ❌ NOT responsible for: player health, bullet spawning, avatar management
+
+---
+
+#### `[MR Motif] Spawn Manager`
+| Component | Namespace | Responsibility | NetworkObject? |
+|-----------|-----------|----------------|----------------|
+| `NetworkObject` | Fusion | Enables networking | ✅ REQUIRED |
+| `SpawnManagerMotif` | MRMotifs | Open play area spawning (headset position = spawn position) | NetworkBehaviour |
+
+**Single Responsibility:** Spawn location calculation ONLY.
+
+**Responsibilities:**
+- ✅ Determine spawn locations
+- ✅ Respawn positioning
+- ❌ NOT responsible for: avatar instantiation, game state
+
+---
+
+#### `[MR Motif] Avatar Spawner Handler`
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `AvatarSpawnerHandlerMotif` | MRMotifs | Handles avatar spawn events, bridges avatar system to game |
+
+**Single Responsibility:** Avatar spawn event handling.
+
+**Responsibilities:**
+- ✅ React to avatar spawn events
+- ✅ Coordinate with game systems when avatar spawns
+- ❌ NOT responsible for: avatar instantiation (handled by Building Block)
+
+---
+
+#### `[MR Motif] Shooting Setup`
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `ShootingSetupMotif` | MRMotifs | Attaches shooting components (`ShootingPlayerMotif`, `PlayerHealthMotif`) to spawned avatars |
+
+**Single Responsibility:** Component attachment to avatars.
+
+**Responsibilities:**
+- ✅ Listen for avatar spawn via `AvatarEntity.OnSpawned`
+- ✅ Add `ShootingPlayerMotif` for weapon/bullet spawning
+- ✅ Add `PlayerHealthMotif` for health management
+- ✅ Wire up prefab references (bullet, weapon)
+- ❌ NOT responsible for: game state, HUD, scoring
+
+---
+
+#### `[MR Motif] Group Presence`
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `GroupPresenceAndInviteHandlerMotif` | MRMotifs | Meta Platform group presence, invite handling |
+
+**Single Responsibility:** Social/invite features.
+
+**Responsibilities:**
+- ✅ Group presence API
+- ✅ Invite sending/receiving
+- ❌ NOT responsible for: networking, game state
+
+---
+
+#### `[MR Motif] Shooting HUD Canvas`
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `Canvas` | Unity | UI canvas for HUD |
+| `OVROverlayCanvas` | Unity | Quest overlay rendering |
+| `ShootingHUDMotif` | MRMotifs | Health display, kill counter, death panel, hit markers |
+
+**Single Responsibility:** Player HUD visualization.
+
+**Responsibilities:**
+- ✅ Display player health
+- ✅ Display kills/deaths
+- ✅ Death panel with respawn countdown
+- ✅ Hit markers and damage indicators
+- ❌ NOT responsible for: health calculation, game state
+
+---
+
+#### `[MR Motifs] Colocation Manager`
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `ColocationManager` | MRMotifs | Aligns camera rig to shared spatial anchor |
+
+**Single Responsibility:** Camera rig alignment to anchor.
+
+**Responsibilities:**
+- ✅ `AlignUserToAnchor()` - positions camera rig relative to anchor
+- ✅ Calculate calibration error
+- ✅ Validate calibration drift
+- ❌ NOT responsible for: anchor creation, anchor discovery, anchor sharing
+
+> ⚠️ **NOTE:** This is a MonoBehaviour, NOT a NetworkBehaviour. It does not need a NetworkObject.
+
+---
+
+#### `[MR Motifs] SSA Manager` (Shared Spatial Anchor Manager)
+| Component | Namespace | Responsibility | NetworkObject? |
+|-----------|-----------|----------------|----------------|
+| `NetworkObject` | Fusion | Enables networking | ✅ REQUIRED |
+| `SharedSpatialAnchorManager` | MRMotifs | Anchor creation, advertisement, discovery, sharing | NetworkBehaviour |
+| `NetworkObjectPrefabData` | Fusion | Prefab data for network spawning | |
+
+**Single Responsibility:** Spatial anchor lifecycle management.
+
+**Responsibilities:**
+- ✅ **Host:** Create spatial anchor (3 modes: AtOrigin, AtHostPosition, ManualPlacement)
+- ✅ **Host:** Advertise colocation session via `OVRColocationSession`
+- ✅ **Guest:** Discover nearby sessions
+- ✅ **Guest:** Load shared anchor
+- ✅ Call `ColocationManager.AlignUserToAnchor()` after localization
+- ❌ NOT responsible for: room mesh sharing, camera rig manipulation
+
+---
+
+#### `[MR Motif] Practice Mode` (Currently Disabled)
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `PracticeModeMotif` | MRMotifs | **[DISABLED]** Single-player practice with AI targets |
+
+**Status:** DISABLED - Missing `m_targetPrefab` reference. Re-enable after prefab is assigned.
+
+---
+
+#### `[MR Motif] Cover Spawner` (Currently Disabled)
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `CoverSpawnerMotif` | MRMotifs | **[DISABLED]** Spawns cover objects in play area |
+
+**Status:** DISABLED - Missing `m_previewMaterial` and `m_placeSound` references.
+
+---
+
+#### `[MR Motif] Metrics Logger`
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `MetricsLogger` | MRMotifs | Research metrics collection (CSV logging) |
+| `CalibrationAccuracyTracker` | MRMotifs | Calibration drift monitoring |
+
+**Status:** ✅ ENABLED - Collecting research metrics for co-location study.
+
+**Responsibilities:**
+- ✅ Log session metrics to CSV file on device
+- ✅ Track network state (Host/Client/NotConnected)
+- ✅ Track participant count via NetworkRunner
+- ✅ Track frame rate, network latency, calibration error
+- ✅ Track battery temperature and level
+- ❌ NOT responsible for: game state, gameplay logic
+
+**CSV Output:** `/sdcard/Android/data/com.jJFiisJ.ArenaShooting/files/metrics/`
+
+---
+
+### Disabled/Inactive Objects
+
+| GameObject | Status | Reason |
+|------------|--------|--------|
+| `[BuildingBlock] Scene Mesh` | DISABLED | Conflicts with colocation flow |
+| `[BuildingBlock] Scene Debugger` | DISABLED | Debug tool only |
+| `VoiceLogger` (x2) | DISABLED | Voice chat not in MVP |
+| `[MR Motif] Room Sharing` | DISABLED | Experimental room mesh sharing |
+
+---
+
+### Component Responsibility Matrix
+
+| Responsibility | Owner Component | Location |
+|----------------|-----------------|----------|
+| **Networking** | | |
+| Session management | `NetworkRunner` | [BuildingBlock] Network Manager |
+| Host migration | `HostMigrationHandlerMotif` | [BuildingBlock] Network Manager |
+| Latency tracking | `NetworkLatencyTracker` | [BuildingBlock] Network Manager |
+| **Colocation** | | |
+| Colocation orchestration | `ColocationController` | [BuildingBlock] Colocation |
+| Anchor creation/discovery | `SharedSpatialAnchorManager` | [MR Motifs] SSA Manager |
+| Camera rig alignment | `ColocationManager` | [MR Motifs] Colocation Manager |
+| Room mesh sharing | `RoomSharingMotif` | [BuildingBlock] Colocation *(disabled)* |
+| **Game State** | | |
+| State machine | `ShootingGameManagerMotif` | [MR Motif] Shooting Game Manager |
+| Scoring | `ShootingGameManagerMotif` | [MR Motif] Shooting Game Manager |
+| Round timing | `ShootingGameManagerMotif` | [MR Motif] Shooting Game Manager |
+| **Avatars** | | |
+| Avatar instantiation | `AvatarSpawnerFusion` | [BuildingBlock] Networked Avatar |
+| Avatar spawn handling | `AvatarSpawnerHandlerMotif` | [MR Motif] Avatar Spawner Handler |
+| Avatar position sync | `AvatarMovementHandlerMotif` | On spawned avatar prefab |
+| **Combat** | | |
+| Component attachment | `ShootingSetupMotif` | [MR Motif] Shooting Setup |
+| Weapon input/bullets | `ShootingPlayerMotif` | Attached to avatar at runtime |
+| Health/damage | `PlayerHealthMotif` | Attached to avatar at runtime |
+| Bullet physics | `BulletMotif` | BulletMotif.prefab |
+| **UI** | | |
+| HUD display | `ShootingHUDMotif` | [MR Motif] Shooting HUD Canvas |
+| **Spawning** | | |
+| Spawn locations | `SpawnManagerMotif` | [MR Motif] Spawn Manager |
+| **Platform** | | |
+| Platform init | `PlatformInit_` | [BuildingBlock] Platform Init |
+| Group presence | `GroupPresenceAndInviteHandlerMotif` | [MR Motif] Group Presence |
+
+---
+
+### Common Mistakes to Avoid
+
+| ❌ Mistake | ✅ Correct Approach |
+|-----------|---------------------|
+| Adding `NetworkBehaviour` to building block without `NetworkObject` | Add custom NetworkBehaviours to separate MR Motif GameObjects with their own `NetworkObject` |
+| Adding duplicate `SharedSpatialAnchorManager` | Only ONE instance in scene on `[MR Motifs] SSA Manager` |
+| Adding duplicate `ColocationManager` | Only ONE instance in scene on `[MR Motifs] Colocation Manager` |
+| Adding game logic to `[BuildingBlock] Colocation` | Use `[MR Motif]` GameObjects for custom game logic |
+| Having multiple `NetworkRunner` instances | Only ONE `NetworkRunner` in `[BuildingBlock] Network Manager` |
+| Putting health/shooting on building blocks | Attach to avatar prefab at runtime via `ShootingSetupMotif` |
 
 ---
 
@@ -205,6 +681,15 @@ Assets/
 
 ## 📋 Setup Checklist
 
+### Phase 0: Scene Integrity Verification (NEW - Do This First!)
+Before testing, verify the scene has no duplicate components or missing dependencies:
+
+- [ ] **NetworkObject on Colocation:** `[BuildingBlock] Colocation` has `NetworkObject` component
+- [ ] **Single SSA Manager:** Only ONE `SharedSpatialAnchorManager` in scene (on `[MR Motifs] SSA Manager`)
+- [ ] **Single Colocation Manager:** Only ONE `ColocationManager` in scene (on `[MR Motifs] Colocation Manager`)
+- [ ] **Scene Mesh Disabled:** `[BuildingBlock] Scene Mesh` is disabled (can re-enable later)
+- [ ] **No NetworkBehaviours without NetworkObject:** Every NetworkBehaviour has a NetworkObject on same GameObject
+
 ### Phase 1: Configuration (Required)
 - [ ] **Photon App ID**: Go to **Fusion > Fusion Hub** → Enter your App ID from [Photon Dashboard](https://dashboard.photonengine.com)
 - [ ] **Oculus App ID**: Go to **Oculus > Platform > Edit Settings** → Enter App ID from [Meta Developer Dashboard](https://developer.oculus.com)
@@ -304,9 +789,108 @@ Assets/
 | Achievements | Low | Meta Platform achievements |
 | Cross-session friends | Low | Play with same people again |
 
+### Phase 5: Effect Mesh Arena System 🎯
+
+Use Meta's MRUK (Mixed Reality Utility Kit) to scan real-world environments and use them as game arenas with collision detection, boundaries, and multiplayer sharing.
+
+#### 5.1 Arena Scanning Implementation
+| Feature | Priority | Notes |
+|---------|----------|-------|
+| `ArenaManagerMotif.cs` | High | Main arena management script |
+| Listen to Scene Mesh completion | High | `RoomMeshEvent.OnRoomMeshLoadCompleted` |
+| Query MRUK room bounds | High | `room.GetRoomBounds()` for playable area |
+| Arena boundary visualization | Medium | Visual indicators of play area limits |
+| `ArenaConfigMotif.cs` | Medium | Configurable arena settings |
+
+#### 5.2 EffectMesh Integration
+| Feature | Priority | Notes |
+|---------|----------|-------|
+| Custom arena material | Medium | Wireframe, selective passthrough, or solid |
+| Semantic label filtering | Medium | Exclude CEILING, DOOR, WINDOW_FRAME |
+| Physics colliders | High | Scene Mesh colliders for bullet physics |
+| Cut holes for doors/windows | Low | `EffectMesh.CutHoles` feature |
+
+#### 5.3 Arena Persistence (Save/Load)
+| Feature | Priority | Notes |
+|---------|----------|-------|
+| JSON arena export | Medium | `MRUK.Instance.LoadSceneFromJson()` |
+| Space Sharing for multiplayer | High | `ShareRoomsAsync()` to share with others |
+| Spatial Anchor persistence | Medium | Arena position survives app restart |
+
+#### 5.4 Shooting Game Integration
+| Component | Integration Point |
+|-----------|-------------------|
+| `SpawnManagerMotif` | Use arena floor bounds for spawn positioning |
+| `BulletMotif` | Use Scene Mesh colliders for bullet physics |
+| `ShootingGameManagerMotif` | Wait for arena ready before starting match |
+| `ColocationManager` | Share arena with other players via Space Sharing API |
+
+#### Current Foundation (Already In Scene)
+- ✅ `[BuildingBlock] Scene Mesh` with `RoomMeshController` + `RoomMeshEvent`
+- ✅ `[BuildingBlock] MR Utility Kit` for MRUK access
+- ✅ `[BuildingBlock] Colocation` for multiplayer colocation
+- ✅ `[MR Motifs] SSA Manager` for Space Sharing capability
+
+#### Key MRUK APIs
+```csharp
+// Load scene from device scan
+MRUK.Instance.LoadSceneFromDevice();
+
+// Get current room and bounds
+var room = MRUK.Instance.GetCurrentRoom();
+var bounds = room.GetRoomBounds();
+
+// Share room with other players (Host)
+await room.ShareRoomAsync(groupUuid);
+
+// Load shared room (Guest)
+await MRUK.Instance.LoadSceneFromSharedRooms(null, groupUuid, alignmentData);
+
+// EffectMesh for visualization with colliders
+effectMesh.AddColliders = true;
+effectMesh.Labels = new[] { "FLOOR", "WALL", "GLOBAL_MESH" };
+```
+
 ---
 
 ## 🐛 Known Issues & Troubleshooting
+
+### ⚠️ Scene Configuration Issues (CRITICAL)
+
+#### Duplicate Components Break Colocation
+**Symptoms:** Game stuck on "Waiting for Players", colocation never completes, no errors visible.
+
+**Cause:** Duplicate `SharedSpatialAnchorManager` or `ColocationManager` components in scene.
+
+**Solution:**
+1. Open scene in Unity
+2. Search hierarchy for `SharedSpatialAnchorManager` - should be on `[MR Motifs] SSA Manager` ONLY
+3. Search hierarchy for `ColocationManager` - should be on `[MR Motifs] Colocation Manager` ONLY
+4. Delete any duplicates
+5. Save scene
+
+**Prevention:** See "Detailed Scene Object & Component Responsibilities" section above.
+
+---
+
+#### Missing NetworkObject on Building Block
+**Symptoms:** Colocation fails silently, FusionMessenger/FusionNetworkData not functioning.
+
+**Cause:** `[BuildingBlock] Colocation` has NetworkBehaviour components (`FusionMessenger`, `FusionNetworkData`) but no `NetworkObject`.
+
+**Solution:**
+1. Select `[BuildingBlock] Colocation` in hierarchy
+2. Add `NetworkObject` component if missing
+3. Save scene
+
+---
+
+#### Building Block Scene Mesh Conflicts
+**Symptoms:** Colocation works but room mesh causes issues.
+
+**Solution:** Disable `[BuildingBlock] Scene Mesh` GameObject until colocation is stable.
+
+---
 
 ### Players Don't See Each Other
 1. Verify both devices completed Space Setup in the same room

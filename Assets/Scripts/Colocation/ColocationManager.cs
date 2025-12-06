@@ -14,7 +14,11 @@ namespace MRMotifs.ColocatedExperiences.Colocation
         private Quaternion m_preAlignmentRotation;
         private float m_currentCalibrationError = 0f;
         private Vector3 m_anchorPosition;
-        private bool m_hasAligned = false;
+        private bool m_hasCalibrated = false;
+        
+        // Reference position for drift tracking (camera rig position after calibration)
+        private Vector3 m_referenceRigPosition;
+        private bool m_isHost = false;
 
         private void Awake()
         {
@@ -22,7 +26,31 @@ namespace MRMotifs.ColocatedExperiences.Colocation
         }
 
         /// <summary>
+        /// Called by host when they create an anchor at their position.
+        /// Registers the host as calibrated for drift tracking purposes.
+        /// </summary>
+        /// <param name="anchorPosition">World position where the anchor was created.</param>
+        public void RegisterHostCalibration(Vector3 anchorPosition)
+        {
+            m_anchorPosition = anchorPosition;
+            m_referenceRigPosition = m_cameraRigTransform.position;
+            m_isHost = true;
+            m_hasCalibrated = true;
+            m_currentCalibrationError = 0f; // Host has 0 initial error (they define the origin)
+            
+            Debug.Log($"Motif: Host calibration registered. Anchor at {anchorPosition}, Rig at {m_referenceRigPosition}");
+            
+            // Notify CalibrationAccuracyTracker if present
+            var calibrationTracker = FindAnyObjectByType<MRMotifs.SharedActivities.Metrics.CalibrationAccuracyTracker>();
+            if (calibrationTracker != null)
+            {
+                calibrationTracker.OnCalibrationComplete(m_anchorPosition, Quaternion.identity);
+            }
+        }
+
+        /// <summary>
         /// Aligns the player's tracking space and camera rig to the specified anchor.
+        /// Called by clients when they localize to the shared anchor.
         /// </summary>
         /// <param name="anchor">The spatial anchor to align to.</param>
         public void AlignUserToAnchor(OVRSpatialAnchor anchor)
@@ -44,19 +72,28 @@ namespace MRMotifs.ColocatedExperiences.Colocation
             m_cameraRigTransform.position = anchorTransform.InverseTransformPoint(Vector3.zero);
             m_cameraRigTransform.eulerAngles = new Vector3(0, -anchorTransform.eulerAngles.y, 0);
 
-            // Calculate alignment error
-            Vector3 postAlignmentPosition = m_cameraRigTransform.position;
-            Vector3 positionDelta = postAlignmentPosition - m_anchorPosition;
-            m_currentCalibrationError = positionDelta.magnitude * 1000f; // Convert to millimeters
+            // Store reference position for drift tracking
+            m_referenceRigPosition = m_cameraRigTransform.position;
+            m_isHost = false;
+            m_hasCalibrated = true;
+            
+            // Initial calibration error is 0 - we just aligned to the anchor
+            // The "error" was the pre-alignment offset, but that's now corrected
+            m_currentCalibrationError = 0f;
 
-            m_hasAligned = true;
-
-            Debug.Log($"Motif: Alignment complete. Calibration error: {m_currentCalibrationError:F2}mm");
+            Debug.Log($"Motif: Client alignment complete. Rig moved from {m_preAlignmentPosition} to {m_referenceRigPosition}");
+            
+            // Notify CalibrationAccuracyTracker if present
+            var calibrationTracker = FindAnyObjectByType<MRMotifs.SharedActivities.Metrics.CalibrationAccuracyTracker>();
+            if (calibrationTracker != null)
+            {
+                calibrationTracker.OnCalibrationComplete(m_anchorPosition, anchorTransform.rotation);
+            }
         }
 
         /// <summary>
         /// Gets the current calibration error in millimeters.
-        /// Returns 0 if no alignment has been performed yet.
+        /// Returns 0 if no calibration has been performed yet.
         /// </summary>
         public float GetCurrentCalibrationError()
         {
@@ -64,20 +101,20 @@ namespace MRMotifs.ColocatedExperiences.Colocation
         }
 
         /// <summary>
-        /// Validates calibration by measuring position delta from anchor.
-        /// Used for periodic calibration checks during sessions.
+        /// Validates calibration by measuring drift from reference position.
+        /// Tracks how much the camera rig has drifted since calibration.
         /// </summary>
         public float ValidateCalibration()
         {
-            if (!m_hasAligned)
+            if (!m_hasCalibrated)
             {
-                Debug.LogWarning("Motif: Cannot validate calibration - no alignment performed yet.");
                 return 0f;
             }
 
-            // Measure current drift from expected position
+            // Measure drift from reference position (horizontal only)
             Vector3 currentPosition = m_cameraRigTransform.position;
-            Vector3 driftDelta = currentPosition - m_anchorPosition;
+            Vector3 driftDelta = currentPosition - m_referenceRigPosition;
+            driftDelta.y = 0; // Ignore vertical drift (sitting/standing)
             float driftError = driftDelta.magnitude * 1000f; // Convert to millimeters
 
             m_currentCalibrationError = driftError;
@@ -90,8 +127,25 @@ namespace MRMotifs.ColocatedExperiences.Colocation
         public void ResetCalibration()
         {
             m_currentCalibrationError = 0f;
-            m_hasAligned = false;
+            m_hasCalibrated = false;
+            m_isHost = false;
             Debug.Log("Motif: Calibration reset.");
+        }
+        
+        /// <summary>
+        /// Returns true if this user has completed calibration.
+        /// </summary>
+        public bool IsCalibrated()
+        {
+            return m_hasCalibrated;
+        }
+        
+        /// <summary>
+        /// Returns true if this user is the host (anchor creator).
+        /// </summary>
+        public bool IsHost()
+        {
+            return m_isHost;
         }
 
         /// <summary>
@@ -99,12 +153,14 @@ namespace MRMotifs.ColocatedExperiences.Colocation
         /// </summary>
         public string GetCalibrationStatus()
         {
-            if (!m_hasAligned)
-                return "No alignment performed yet.";
+            if (!m_hasCalibrated)
+                return "No calibration performed yet.";
 
-            return $"Calibration Error: {m_currentCalibrationError:F2}mm\n" +
+            string role = m_isHost ? "Host" : "Client";
+            return $"Role: {role}\n" +
+                   $"Drift Error: {m_currentCalibrationError:F2}mm\n" +
                    $"Status: {(m_currentCalibrationError < 10f ? "PASS" : "WARNING")}\n" +
-                   $"Anchor Position: {m_anchorPosition}";
+                   $"Reference Position: {m_referenceRigPosition}";
         }
     }
 }

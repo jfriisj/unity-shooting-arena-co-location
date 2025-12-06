@@ -139,6 +139,20 @@ namespace MRMotifs.SharedActivities.ShootingSample
             {
                 m_audioSource = gameObject.AddComponent<AudioSource>();
             }
+
+            // Load audio clips from Resources if not assigned
+            if (m_hitSound == null)
+            {
+                m_hitSound = Resources.Load<AudioClip>("Audio/Hit");
+            }
+            if (m_deathSound == null)
+            {
+                m_deathSound = Resources.Load<AudioClip>("Audio/Death");
+            }
+            if (m_respawnSound == null)
+            {
+                m_respawnSound = Resources.Load<AudioClip>("Audio/Respawn");
+            }
         }
 
         /// <summary>

@@ -2,7 +2,7 @@
 
 ## Overview
 
-This guide provides step-by-step instructions for collecting technical performance and collaboration metrics using Meta Quest 3 headsets in the MetaColocationDemos co-located VR system with Unity Netcode for GameObjects.
+This guide provides step-by-step instructions for collecting technical performance metrics using Meta Quest 3 headsets in the co-located VR shooting arena system with Photon Fusion 2 networking.
 
 ---
 
@@ -32,12 +32,12 @@ This guide provides step-by-step instructions for collecting technical performan
 
 **Software:**
 - Unity 6000.0.62f1 with Android Build Support
-- Meta XR All-in-One SDK
-- Unity Netcode for GameObjects
+- Meta XR SDK v81.0.0
+- Photon Fusion 2 (Shared Mode)
 - ADB (Android Debug Bridge) - typically at `C:\Users\<username>\Android\Sdk\platform-tools\adb.exe`
 - Python 3.8+ with pandas, numpy, matplotlib (for analysis)
 
-**Note:** This guide describes the technical capabilities of the MetricsLogger system. No formal user studies have been conducted. This is a technical demonstration prototype.
+**Note:** This guide describes the technical capabilities of the MetricsLogger system. This is a technical demonstration prototype.
 
 **Physical Space:**
 - Clear play area (minimum 3m × 3m per user)
@@ -100,14 +100,14 @@ adb -s <DEVICE_SERIAL> shell ip addr show wlan0 | grep inet
 
 ### Scene Components
 
-The following components are already configured in `ColocationLightSaberDemo.unity`:
+The following components are configured in `ColocationShootingArena.unity`:
 
 | Component | GameObject | Purpose |
 |-----------|------------|---------|
 | **MetricsLogger** | `[MetricsLogger]` | Main metrics collection & CSV export |
-| **NetworkLatencyTracker** | `[BuildingBlock] Network Manager` | Real-time RTT measurement via ping/pong RPCs |
 | **CalibrationAccuracyTracker** | `[BuildingBlock] Shared Spatial Anchor Core` | Spatial alignment tracking |
-| **GroupPresenceSetup** | `[BuildingBlock] Platform Init` | Enables invite functionality |
+| **ColocationManager** | `[BuildingBlock] Colocation` | Colocation discovery & anchor sharing |
+| **NetworkObject** | `[BuildingBlock] Colocation` | Enables networked colocation |
 
 ### MetricsLogger Configuration
 
@@ -122,22 +122,25 @@ The `MetricsLogger` component has these settings:
 
 ### Metrics Collected
 
-**Technical Metrics** (logged every 1 second):
+**Essential Technical Metrics** (logged every 1 second):
 
 | Metric | Column Name | Description | Target |
 |--------|-------------|-------------|--------|
 | Session ID | `session_id` | Unique session identifier | - |
 | Headset ID | `headset_id` | Unique device hash (H_XXXX) | - |
-| Participants | `participant_count` | Connected clients count | - |
+| Participants | `participant_count` | Connected players count | 2-3 |
 | Timestamp | `timestamp_sec` | Seconds since session start | - |
-| Frame Rate | `frame_rate_fps` | Current FPS (0.5s average) | ≥90 |
-| Frame Time | `frame_time_ms` | Time per frame | ≤11.1ms |
-| Network Latency | `network_latency_ms` | Round-trip time via RPC ping | ≤75ms |
-| Packet Loss | `packet_loss_pct` | Lost packets percentage | <1% |
+| Frame Rate | `frame_rate_fps` | Current FPS (0.5s average) | ≥72 |
+| Network Latency | `network_latency_ms` | RTT via Photon Fusion | ≤75ms |
 | Calibration Error | `calibration_error_mm` | Spatial alignment accuracy | <10mm |
-| Temperature | `headset_temp_c` | Estimated device temperature | <42°C |
+| Temperature | `battery_temp_c` | Device temperature | <42°C |
 | Battery Level | `battery_level` | Battery percentage | - |
 | Scene State | `scene_state` | Host/Client/Offline | - |
+
+**Research Alignment:**
+- **Network Latency**: Van Damme et al. threshold ≤75ms for good QoE
+- **Calibration Error**: Reimer et al. threshold <10mm for collision prevention
+- **Frame Rate**: Quest 3 native 72Hz refresh rate
 
 ### Data Persistence
 
@@ -152,7 +155,7 @@ The `MetricsLogger` component has these settings:
 # Build APK in Unity: File → Build Settings → Build
 
 # Install on headsets
-adb -s <DEVICE_SERIAL> install -r MetaColocationDemos.apk
+adb -s <DEVICE_SERIAL> install -r ArenaShooting.apk
 ```
 
 ---
@@ -182,10 +185,10 @@ The system uses Meta's Colocation Discovery API with shared spatial anchors:
 
 The MetricsLogger debug overlay shows:
 ```
-[MetricsLogger] Session: 20251204_143000
-FPS: 90.2 | Temp: 34.5°C | Battery: 87%
-Latency: 28.4ms | Participants: 2 | State: Host
-Metrics Logged: 245
+[MetricsLogger] Session: 20251206_090108
+FPS: 72.1 | Latency: 28.4ms | Calibration: 4.20mm
+Participants: 2 | State: Host | Battery: 87%
+Temp: 34.5°C | Metrics: 245
 ```
 
 ---
@@ -200,9 +203,9 @@ All metrics are logged automatically by the MetricsLogger component at 1Hz sampl
 
 **On Quest Device:**
 ```
-/sdcard/Android/data/com.weareheadset.MetaColocationDemos_Official/files/metrics/
-├── session_20251204_143000_H_1234.csv      # Metrics data
-└── session_20251204_143000_H_1234_metadata.json  # Session info
+/sdcard/Android/data/com.jJFiisJ.ArenaShooting/files/metrics/
+├── session_20251206_090108_H_4193.csv      # Metrics data
+└── session_20251206_090108_H_4193_metadata.json  # Session info
 ```
 
 ### Session Metadata (JSON)
@@ -247,7 +250,7 @@ cd /path/to/MetaColocationDemos
 
 ```bash
 # Set package name
-PACKAGE="com.weareheadset.MetaColocationDemos_Official"
+PACKAGE="com.jJFiisJ.ArenaShooting"
 
 # Create output directory
 mkdir -p research-paper/data/sessions/$(date +%Y%m%d)
@@ -282,9 +285,9 @@ research-paper/data/sessions/
 ### CSV Format
 
 ```csv
-session_id,headset_id,participant_count,timestamp_sec,frame_rate_fps,frame_time_ms,network_latency_ms,packet_loss_pct,calibration_error_mm,headset_temp_c,battery_level,scene_state
-20251204_143000,H_1234,2,0.00,90.2,11.08,28.4,0.000,4.20,34.5,95,Host
-20251204_143000,H_1234,2,1.00,90.1,11.10,29.1,0.000,4.25,34.6,95,Host
+session_id,headset_id,participant_count,timestamp_sec,frame_rate_fps,network_latency_ms,calibration_error_mm,battery_temp_c,battery_level,scene_state
+20251206_090108,H_4193,2,0.00,72.1,28.4,4.20,34.5,95,Host
+20251206_090108,H_4193,2,1.00,72.0,29.1,4.25,34.6,95,Host
 ```
 
 ### Merge Data from All Headsets
@@ -316,7 +319,7 @@ def merge_session_data(session_dir):
 
 ```python
 def calculate_statistics(df):
-    """Generate summary statistics"""
+    """Generate summary statistics aligned with research thresholds"""
     stats = {
         'duration_min': df['timestamp_sec'].max() / 60,
         'mean_fps': df['frame_rate_fps'].mean(),
@@ -324,8 +327,11 @@ def calculate_statistics(df):
         'mean_latency_ms': df['network_latency_ms'].mean(),
         'max_latency_ms': df['network_latency_ms'].max(),
         'mean_calibration_mm': df['calibration_error_mm'].mean(),
-        'fps_target_achieved': (df['frame_rate_fps'] >= 90).mean() * 100,
+        'max_calibration_mm': df['calibration_error_mm'].max(),
+        # Research thresholds
+        'fps_target_achieved': (df['frame_rate_fps'] >= 72).mean() * 100,
         'latency_target_achieved': (df['network_latency_ms'] <= 75).mean() * 100,
+        'calibration_target_achieved': (df['calibration_error_mm'] < 10).mean() * 100,
     }
     return stats
 ```
@@ -355,9 +361,10 @@ Solution:
 
 ```
 Solution:
-1. Verify NetworkLatencyTracker is on a NetworkObject
-2. Check that headsets are connected (scene_state = Host/Client)
-3. NetworkLatencyTracker only measures on clients, not host
+1. Verify headsets are connected to Photon session (scene_state = Host/Client)
+2. When scene_state = "Offline", no network connection exists
+3. Network latency uses Fusion's built-in GetPlayerRtt() - requires active session
+4. Ensure both headsets join the same Photon session before measuring
 ```
 
 ### Calibration Error Always 0mm
@@ -426,32 +433,32 @@ Solution:
 ## Appendix: Component Scripts
 
 ### MetricsLogger.cs
-Location: `Assets/Scripts/MetricsLogger.cs`
-- Main metrics collection
-- CSV export with append mode
+Location: `Assets/Scripts/Shared/Metrics/MetricsLogger.cs`
+- Main metrics collection (1Hz sampling)
+- CSV export with incremental append mode
+- Uses Fusion's built-in `GetPlayerRtt()` for network latency
 - Session metadata JSON export
 - On-screen debug overlay
-
-### NetworkLatencyTracker.cs
-Location: `Assets/Scripts/NetworkLatencyTracker.cs`
-- Ping/pong RPC-based RTT measurement
-- Packet loss tracking
-- Min/max/average statistics
+- Auto-save every 60 seconds
 
 ### CalibrationAccuracyTracker.cs
-Location: `Assets/Scripts/CalibrationAccuracyTracker.cs`
+Location: `Assets/Scripts/Shared/Metrics/CalibrationAccuracyTracker.cs`
 - Spatial alignment error tracking
+- Integration with ColocationManager
+- Threshold alerting (warning >10mm, error >25mm)
 - Recalibration event logging
-- Threshold alerting (>10mm)
 
 ### Data Extraction Scripts
 - `extract_metrics.ps1` - PowerShell (Windows)
 - `extract_metrics.sh` - Bash (Mac/Linux)
 
+### Analysis Scripts
+- `research-paper/scripts/analyze_metrics.py` - Python analysis and visualization
+
 ---
 
-**Version:** 3.0  
-**Last Updated:** December 4, 2025  
-**Project:** MetaColocationDemos
+**Version:** 4.0  
+**Last Updated:** December 6, 2025  
+**Project:** Unity Shooting Arena Co-Location
 
 **Disclaimer:** This guide describes technical capabilities of the MetricsLogger system for performance validation. The prototype is designed for technical demonstration and future empirical research.

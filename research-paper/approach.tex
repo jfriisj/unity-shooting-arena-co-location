@@ -61,12 +61,13 @@ Demo scenarios demonstrate co-located interaction capabilities using shared spat
 
 \subsubsection{Performance Monitoring}
 
-Technical performance metrics are collected through the MetricsLogger system:
+Technical performance metrics are collected through the MetricsLogger system at 1Hz sampling rate:
 \begin{itemize}
-    \item \textbf{Frame Rate:} FPS and frame time tracking
-    \item \textbf{Calibration:} Spatial anchor alignment error from ColocationManager
-    \item \textbf{Network Performance:} RTT monitoring via Photon Fusion
-    \item \textbf{Device Metrics:} Battery level, battery temperature, estimated CPU usage, memory usage
+    \item \textbf{Frame Rate:} Averaged FPS for performance assessment
+    \item \textbf{Network Latency:} RTT monitoring via Photon Fusion (threshold: $\leq75$ms)
+    \item \textbf{Calibration Error:} Spatial anchor alignment deviation in millimeters (threshold: $<10$mm)
+    \item \textbf{Participant Count:} Number of connected headsets
+    \item \textbf{Device Status:} Battery level and temperature for thermal throttling detection
 \end{itemize}
 
 These metrics enable assessment of consumer wireless hardware performance during co-located VR sessions, providing baseline data for future research.

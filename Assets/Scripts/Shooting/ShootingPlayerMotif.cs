@@ -61,7 +61,8 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [Tooltip("Transform used as the firing point (controller or hand).")]
         [SerializeField] private Transform m_rightFirePoint;
 
-        private float m_lastFireTime;
+        private float m_lastLeftFireTime;
+        private float m_lastRightFireTime;
         private OVRCameraRig m_cameraRig;
         private PlayerHealthMotif m_playerHealth;
         private GameObject m_rightWeaponInstance;
@@ -292,14 +293,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
         private void Update()
         {
-            // Only process input if network runner is available
-            if (m_networkRunner == null || !m_networkRunner.IsRunning)
-            {
-                return;
-            }
-
-            // Don't allow shooting if player is dead
-            // Check if PlayerHealthMotif is spawned before accessing networked properties
+            // Don't allow shooting if player is dead (only check if networked and valid)
             if (m_playerHealth != null && m_playerHealth.Object != null && m_playerHealth.Object.IsValid && m_playerHealth.IsDead)
             {
                 return;
@@ -310,69 +304,114 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
         private void HandleShootingInput()
         {
-            // Check for trigger input on either controller
+            // Check for trigger input on either controller - support dual wielding
             var leftTrigger = OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.LTouch);
             var rightTrigger = OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.RTouch);
 
-            if (leftTrigger && CanFire())
+            // Each hand has independent fire rate
+            if (leftTrigger && CanFireLeft())
             {
                 Debug.Log($"[ShootingPlayerMotif] Left trigger pressed! BulletPrefab: {m_bulletPrefab != null}, LeftFirePoint: {m_leftFirePoint != null}");
                 var firePoint = m_leftMuzzle != null ? m_leftMuzzle : m_leftFirePoint;
-                FireBullet(firePoint, m_leftFirePoint);
+                FireBullet(firePoint, m_leftFirePoint, isLeft: true);
             }
 
-            if (rightTrigger && CanFire())
+            if (rightTrigger && CanFireRight())
             {
                 Debug.Log($"[ShootingPlayerMotif] Right trigger pressed! BulletPrefab: {m_bulletPrefab != null}, RightFirePoint: {m_rightFirePoint != null}");
                 var firePoint = m_rightMuzzle != null ? m_rightMuzzle : m_rightFirePoint;
-                FireBullet(firePoint, m_rightFirePoint);
+                FireBullet(firePoint, m_rightFirePoint, isLeft: false);
             }
         }
 
-        private bool CanFire()
+        private bool CanFireLeft()
         {
-            return Time.time - m_lastFireTime >= m_fireRate;
+            return Time.time - m_lastLeftFireTime >= m_fireRate;
         }
 
-        private void FireBullet(Transform firePoint, Transform directionSource)
+        private bool CanFireRight()
         {
-            if (firePoint == null || m_bulletPrefab == null || m_networkRunner == null)
+            return Time.time - m_lastRightFireTime >= m_fireRate;
+        }
+
+        private void FireBullet(Transform firePoint, Transform directionSource, bool isLeft)
+        {
+            if (firePoint == null || m_bulletPrefab == null)
             {
-                Debug.LogWarning($"[ShootingPlayerMotif] Cannot fire! firePoint: {firePoint != null}, bulletPrefab: {m_bulletPrefab != null}, networkRunner: {m_networkRunner != null}");
+                Debug.LogWarning($"[ShootingPlayerMotif] Cannot fire! firePoint: {firePoint != null}, bulletPrefab: {m_bulletPrefab != null}");
                 return;
             }
 
-            m_lastFireTime = Time.time;
+            // Update the correct hand's fire time
+            if (isLeft)
+                m_lastLeftFireTime = Time.time;
+            else
+                m_lastRightFireTime = Time.time;
 
             // Use direction from controller/hand, not necessarily muzzle
             var direction = directionSource != null ? directionSource.forward : firePoint.forward;
 
-            Debug.Log($"[ShootingPlayerMotif] Spawning bullet at {firePoint.position}, direction: {direction}");
-
-            // Spawn the networked bullet
-            var bullet = m_networkRunner.Spawn(
-                m_bulletPrefab,
-                firePoint.position,
-                Quaternion.LookRotation(direction),
-                m_networkRunner.LocalPlayer
-            );
-
-            if (bullet != null)
+            // Check if we're connected to network
+            if (m_networkRunner != null && m_networkRunner.IsRunning)
             {
-                Debug.Log($"[ShootingPlayerMotif] Bullet spawned successfully!");
-                var bulletMotif = bullet.GetComponent<BulletMotif>();
-                if (bulletMotif != null)
-                {
-                    bulletMotif.Initialize(OwnerPlayer, direction * m_fireForce, m_bulletLifetime);
-                }
+                // Networked bullet spawn
+                Debug.Log($"[ShootingPlayerMotif] Spawning networked bullet at {firePoint.position}");
 
-                // Play fire sound locally
-                PlayFireSound();
+                var bullet = m_networkRunner.Spawn(
+                    m_bulletPrefab,
+                    firePoint.position,
+                    Quaternion.LookRotation(direction),
+                    m_networkRunner.LocalPlayer
+                );
+
+                if (bullet != null)
+                {
+                    var bulletMotif = bullet.GetComponent<BulletMotif>();
+                    if (bulletMotif != null)
+                    {
+                        bulletMotif.Initialize(OwnerPlayer, direction * m_fireForce, m_bulletLifetime);
+                    }
+                }
+                else
+                {
+                    Debug.LogError("[ShootingPlayerMotif] Failed to spawn networked bullet!");
+                }
             }
             else
             {
-                Debug.LogError("[ShootingPlayerMotif] Failed to spawn bullet!");
+                // Local bullet spawn (practice mode / offline)
+                Debug.Log($"[ShootingPlayerMotif] Spawning local bullet at {firePoint.position}");
+                SpawnLocalBullet(firePoint.position, direction);
             }
+
+            // Play fire sound
+            PlayFireSound();
+        }
+
+        /// <summary>
+        /// Spawns a local (non-networked) bullet for practice/offline mode.
+        /// </summary>
+        private void SpawnLocalBullet(Vector3 position, Vector3 direction)
+        {
+            // Instantiate the bullet prefab locally
+            var bulletGO = Instantiate(m_bulletPrefab.gameObject, position, Quaternion.LookRotation(direction));
+            
+            // Remove NetworkObject component since we're not networked
+            var networkObj = bulletGO.GetComponent<NetworkObject>();
+            if (networkObj != null)
+            {
+                Destroy(networkObj);
+            }
+
+            // Set up rigidbody velocity
+            var rb = bulletGO.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = direction * m_fireForce;
+            }
+
+            // Auto-destroy after lifetime
+            Destroy(bulletGO, m_bulletLifetime);
         }
 
         private void PlayFireSound()

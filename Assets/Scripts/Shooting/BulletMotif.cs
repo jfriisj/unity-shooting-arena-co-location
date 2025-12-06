@@ -60,6 +60,12 @@ namespace MRMotifs.SharedActivities.ShootingSample
             
             // Apply static config
             if (ConfigDamage > 0) m_damage = ConfigDamage;
+
+            // Load hit sound from Resources if not assigned
+            if (m_hitSound == null)
+            {
+                m_hitSound = Resources.Load<AudioClip>("Audio/Hit");
+            }
         }
 
         public override void Spawned()
