@@ -5,6 +5,7 @@ using Fusion;
 using UnityEngine;
 using Meta.XR.Samples;
 using Meta.XR.MultiplayerBlocks.Fusion;
+using MRMotifs.SharedActivities.Startup;
 
 namespace MRMotifs.SharedActivities.ShootingSample
 {
@@ -41,6 +42,16 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [Tooltip("Sound played when firing.")]
         [SerializeField] private AudioClip m_fireSound;
 
+        [Header("Muzzle Flash")]
+        [Tooltip("Array of muzzle flash prefabs from Easy FPS. One is randomly selected each shot.")]
+        [SerializeField] private GameObject[] m_muzzleFlashPrefabs;
+
+        [Tooltip("Duration the muzzle flash stays visible.")]
+        [SerializeField] private float m_muzzleFlashDuration = 0.05f;
+
+        [Tooltip("Scale of the muzzle flash effect.")]
+        [SerializeField] private float m_muzzleFlashScale = 0.5f;
+
         [Header("Weapon Visuals")]
         [Tooltip("Weapon prefab to attach to the right hand/controller.")]
         [SerializeField] private GameObject m_weaponPrefab;
@@ -71,6 +82,8 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private Transform m_leftMuzzle;
         private NetworkRunner m_networkRunner;
         private AudioSource m_spawnedAudioSource;
+        private GameStartupManagerMotif m_startupManager;
+        private bool m_weaponsVisible = false;
 
         /// <summary>
         /// The PlayerRef of the owner of this shooting player.
@@ -114,15 +127,87 @@ namespace MRMotifs.SharedActivities.ShootingSample
                     m_rightFirePoint = m_cameraRig.rightControllerAnchor;
                 }
 
-                // Spawn weapon models (this is a local player component)
+                // Spawn weapon models (hidden initially until startup complete)
                 SpawnWeaponModels();
+                SetWeaponsVisible(false);
             }
             
-            Debug.Log("[ShootingPlayerMotif] Started - weapons spawned");
+            // Subscribe to startup complete event to show weapons
+            m_startupManager = FindAnyObjectByType<GameStartupManagerMotif>();
+            if (m_startupManager != null)
+            {
+                if (m_startupManager.IsStartupComplete)
+                {
+                    // Startup already complete, show weapons immediately
+                    SetWeaponsVisible(true);
+                    Debug.Log("[ShootingPlayerMotif] Started - startup already complete, weapons visible");
+                }
+                else
+                {
+                    // Wait for startup to complete
+                    m_startupManager.OnStartupComplete += OnStartupComplete;
+                    Debug.Log("[ShootingPlayerMotif] Started - waiting for startup complete to show weapons");
+                }
+            }
+            else
+            {
+                // No startup manager, show weapons immediately (fallback)
+                SetWeaponsVisible(true);
+                Debug.Log("[ShootingPlayerMotif] Started - no startup manager, weapons visible");
+            }
+        }
+
+        private void OnStartupComplete()
+        {
+            SetWeaponsVisible(true);
+            Debug.Log("[ShootingPlayerMotif] Startup complete - weapons now visible, ray helpers disabled");
+        }
+
+        private void SetWeaponsVisible(bool visible)
+        {
+            m_weaponsVisible = visible;
+            if (m_rightWeaponInstance != null)
+            {
+                m_rightWeaponInstance.SetActive(visible);
+            }
+            if (m_leftWeaponInstance != null)
+            {
+                m_leftWeaponInstance.SetActive(visible);
+            }
+            
+            // Toggle laser pointers - enable when weapons hidden (for UI interaction), disable when weapons visible
+            SetLaserPointersEnabled(!visible);
+        }
+
+        private void SetLaserPointersEnabled(bool enabled)
+        {
+            if (m_cameraRig == null) return;
+            
+            // Right controller laser pointer
+            var rightLaser = m_cameraRig.rightControllerAnchor?.Find("LaserPointer");
+            if (rightLaser != null)
+            {
+                rightLaser.gameObject.SetActive(enabled);
+            }
+            
+            // Left controller laser pointer
+            var leftLaser = m_cameraRig.leftControllerAnchor?.Find("LaserPointer");
+            if (leftLaser != null)
+            {
+                leftLaser.gameObject.SetActive(enabled);
+            }
+            
+            Debug.Log($"[ShootingPlayerMotif] Laser pointers {(enabled ? "enabled" : "disabled")}");
         }
 
         private void OnDestroy()
         {
+            // Unsubscribe from startup event
+            if (m_startupManager != null)
+            {
+                m_startupManager.OnStartupComplete -= OnStartupComplete;
+            }
+            
             // Restore controller visibility when this component is destroyed
             ShowControllerModels();
 
@@ -386,6 +471,35 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
             // Play fire sound
             PlayFireSound();
+
+            // Trigger muzzle flash effect
+            TriggerMuzzleFlash(firePoint);
+        }
+
+        /// <summary>
+        /// Triggers a random muzzle flash effect at the specified fire point.
+        /// Uses Easy FPS muzzle flash prefabs for visual variety.
+        /// </summary>
+        private void TriggerMuzzleFlash(Transform firePoint)
+        {
+            if (m_muzzleFlashPrefabs == null || m_muzzleFlashPrefabs.Length == 0)
+            {
+                return;
+            }
+
+            // Select random muzzle flash prefab
+            int randomIndex = Random.Range(0, m_muzzleFlashPrefabs.Length);
+            var prefab = m_muzzleFlashPrefabs[randomIndex];
+
+            if (prefab == null) return;
+
+            // Spawn muzzle flash at fire point with Easy FPS rotation offset
+            var flash = Instantiate(prefab, firePoint.position, firePoint.rotation * Quaternion.Euler(0, 0, 90));
+            flash.transform.SetParent(firePoint);
+            flash.transform.localScale = Vector3.one * m_muzzleFlashScale;
+
+            // Destroy after duration
+            Destroy(flash, m_muzzleFlashDuration);
         }
 
         /// <summary>
@@ -436,6 +550,23 @@ namespace MRMotifs.SharedActivities.ShootingSample
         public void SetFireRate(float rate)
         {
             m_fireRate = rate;
+        }
+
+        /// <summary>
+        /// Sets the muzzle flash prefabs at runtime.
+        /// Use Easy FPS muzzle flash prefabs for visual variety.
+        /// </summary>
+        public void SetMuzzleFlashPrefabs(GameObject[] prefabs)
+        {
+            m_muzzleFlashPrefabs = prefabs;
+        }
+
+        /// <summary>
+        /// Sets the fire sound at runtime.
+        /// </summary>
+        public void SetFireSound(AudioClip clip)
+        {
+            m_fireSound = clip;
         }
 
         /// <summary>

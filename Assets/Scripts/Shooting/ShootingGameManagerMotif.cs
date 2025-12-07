@@ -124,6 +124,10 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
         private void Update()
         {
+            // Don't access networked properties until spawned
+            if (!Object || !Object.IsValid)
+                return;
+                
             // Check for restart input (hold both grip buttons)
             CheckRestartInput();
             

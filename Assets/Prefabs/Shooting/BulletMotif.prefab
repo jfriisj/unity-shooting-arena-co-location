@@ -288,5 +288,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_damage: 10
   m_hitEffectPrefab: {fileID: 6151908392494861471, guid: 1c0d64f152cd2b342b15c8b7d6ad5c9b, type: 3}
+  m_bulletHolePrefab: {fileID: 179232, guid: b2ac1383a96f94a50b7ed458be173bbd, type: 3}
   m_trailRenderer: {fileID: 0}
+  m_bulletHoleLifetime: 10
   m_hitSound: {fileID: 0}

@@ -7,12 +7,15 @@ using Meta.XR.MultiplayerBlocks.Shared;
 using Meta.XR.MultiplayerBlocks.Fusion;
 using Meta.XR.Samples;
 using MRMotifs.SharedActivities.Spawning;
+using MRMotifs.SharedActivities.Startup;
 
 namespace MRMotifs.SharedActivities.ShootingSample
 {
     /// <summary>
     /// Scene-based setup for the shooting game. Attaches shooting components to players
     /// when their avatars spawn. Place this in the scene alongside the Avatar Spawner Handler.
+    /// 
+    /// Setup is gated on GameStartupManagerMotif completing its flow to prevent race conditions.
     /// </summary>
     [MetaCodeSample("MRMotifs-SharedActivities")]
     public class ShootingSetupMotif : MonoBehaviour
@@ -20,6 +23,9 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [Header("Prefabs")]
         [Tooltip("The networked bullet prefab.")]
         [SerializeField] private NetworkObject m_bulletPrefab;
+
+        [Tooltip("Bullet hole decal prefab from Easy FPS.")]
+        [SerializeField] private GameObject m_bulletHolePrefab;
 
         [Header("Weapon Visuals")]
         [Tooltip("The weapon model prefab to attach to controllers (e.g., from FA FPS Weapons Pack).")]
@@ -34,10 +40,15 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [Tooltip("Scale of the weapon model.")]
         [SerializeField] private float m_weaponScale = 0.8f;
 
+        [Header("Muzzle Flash (Easy FPS)")]
+        [Tooltip("Array of muzzle flash prefabs from Easy FPS. One is randomly selected per shot.")]
+        [SerializeField] private GameObject[] m_muzzleFlashPrefabs;
+
         private NetworkRunner m_networkRunner;
         private SpawnManagerMotif m_spawnManager;
         private ShootingGameManagerMotif m_gameManager;
         private OVRCameraRig m_cameraRig;
+        private GameStartupManagerMotif m_startupManager;
 
         private void Awake()
         {
@@ -49,6 +60,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private void Start()
         {
             Debug.Log($"[ShootingSetupMotif] Start - bulletPrefab: {(m_bulletPrefab != null ? m_bulletPrefab.name : "NULL")}, weaponPrefab: {(m_weaponPrefab != null ? m_weaponPrefab.name : "NULL")}");
+            m_startupManager = FindAnyObjectByType<GameStartupManagerMotif>();
         }
 
         private void OnDestroy()
@@ -75,6 +87,38 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
         private System.Collections.IEnumerator SetupShootingForAvatar(AvatarEntity avatarEntity)
         {
+            // Wait for startup manager to complete its flow (room scan, colocation, etc.)
+            if (m_startupManager == null)
+            {
+                m_startupManager = FindAnyObjectByType<GameStartupManagerMotif>();
+            }
+
+            if (m_startupManager != null)
+            {
+                Debug.Log("[ShootingSetupMotif] Waiting for startup flow to complete...");
+                float startupTimeout = 60f;
+                float startupElapsed = 0f;
+                while (!m_startupManager.IsStartupComplete && startupElapsed < startupTimeout)
+                {
+                    if (m_startupManager.CurrentState == StartupState.Error)
+                    {
+                        Debug.LogWarning("[ShootingSetupMotif] Startup flow failed, aborting shooting setup");
+                        yield break;
+                    }
+                    yield return new WaitForSeconds(0.5f);
+                    startupElapsed += 0.5f;
+                }
+
+                if (!m_startupManager.IsStartupComplete)
+                {
+                    Debug.LogWarning("[ShootingSetupMotif] Startup flow timed out, proceeding anyway");
+                }
+                else
+                {
+                    Debug.Log("[ShootingSetupMotif] Startup flow complete, proceeding with shooting setup");
+                }
+            }
+
             // Wait for avatar to be fully ready
             yield return new WaitForSeconds(1.5f);
 
@@ -83,6 +127,26 @@ namespace MRMotifs.SharedActivities.ShootingSample
             {
                 Debug.LogWarning("[ShootingSetupMotif] Avatar was destroyed before setup completed");
                 yield break;
+            }
+
+            // Wait for SpawnManager to be available (may spawn later in shared mode)
+            if (m_spawnManager == null)
+            {
+                m_spawnManager = FindAnyObjectByType<SpawnManagerMotif>();
+            }
+            
+            float timeout = 10f;
+            float elapsed = 0f;
+            while (m_spawnManager == null && elapsed < timeout)
+            {
+                yield return new WaitForSeconds(0.5f);
+                elapsed += 0.5f;
+                m_spawnManager = FindAnyObjectByType<SpawnManagerMotif>();
+            }
+
+            if (m_spawnManager == null)
+            {
+                Debug.LogWarning("[ShootingSetupMotif] SpawnManager not found, continuing without spawn point");
             }
 
             // Use AvatarEntity.IsLocal to correctly identify the local player
@@ -137,6 +201,19 @@ namespace MRMotifs.SharedActivities.ShootingSample
             {
                 shootingPlayer.ConfigureWeapon(m_weaponPrefab, m_weaponPositionOffset, m_weaponRotationOffset, m_weaponScale);
                 shootingPlayer.RespawnWeaponModels();
+            }
+
+            // Configure muzzle flash effects from Easy FPS
+            if (m_muzzleFlashPrefabs != null && m_muzzleFlashPrefabs.Length > 0)
+            {
+                shootingPlayer.SetMuzzleFlashPrefabs(m_muzzleFlashPrefabs);
+            }
+
+            // Configure fire sound from ShootingAudioMotif
+            var audioMotif = FindAnyObjectByType<ShootingAudioMotif>();
+            if (audioMotif != null && audioMotif.FireClip != null)
+            {
+                shootingPlayer.SetFireSound(audioMotif.FireClip);
             }
 
             Debug.Log("[ShootingSetupMotif] Local player shooting setup complete");

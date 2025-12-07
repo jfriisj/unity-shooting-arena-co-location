@@ -1,4 +1,22 @@
+---
+applyTo: '**'
+---
 # MR Motifs - Copilot Instructions
+
+## ⚠️ CRITICAL: Simplicity First Principle
+
+**Always prioritize simple, easy-to-understand implementations.** When developing features or solving problems:
+
+1. **Keep it simple** - Choose the most straightforward approach that works
+2. **Minimize complexity** - Avoid over-engineering; fewer moving parts = fewer bugs
+3. **Use existing solutions** - Leverage built-in Unity/Meta SDK features before creating custom ones
+4. **Small, focused scripts** - One responsibility per script, short methods (~10-20 lines max)
+5. **Avoid premature optimization** - Make it work first, optimize only when needed
+6. **Prefer composition over inheritance** - Use components and simple data flow
+7. **Clear naming** - Self-documenting code reduces need for comments
+8. **No unnecessary abstractions** - Only add layers when there's a proven need
+
+**When in doubt, ask: "Is there a simpler way to do this?"**
 
 ## Project Overview
 Unity 6 Mixed Reality sample project demonstrating Meta Quest MR features using URP and OpenXR. Contains 4 independent "motifs" (reusable MR patterns) under `Assets/MRMotifs/`.
@@ -39,11 +57,15 @@ This project also integrates **HzOSDevMCP** for Meta Quest device management and
 4. **Find 3D assets**: Search Meta's asset library before creating custom models
 
 ### Workflow Guidelines
-1. **Check scene state first**: Use `Scene_GetHierarchy` to understand current setup before modifications
-2. **Use MCP for GameObject operations**: Create, modify, parent, add components via MCP tools rather than writing scripts
-3. **Instant code execution**: Use `Script_Execute` for one-off operations using Roslyn compilation
-4. **Validate changes**: Call `Console_GetLogs` after operations to catch errors
-5. **Create scripts only when needed**: For persistent behaviors, use `Script_CreateOrUpdate` with proper namespaces
+1. **Keep it simple** - Use the easiest approach that solves the problem
+2. **Check scene state first**: Use `Scene_GetHierarchy` to understand current setup before modifications
+3. **Use MCP for GameObject operations**: Create, modify, parent, add components via MCP tools rather than writing scripts
+4. **Instant code execution**: Use `Script_Execute` for one-off operations using Roslyn compilation
+5. **Validate changes**: Call `Console_GetLogs` after operations to catch errors
+6. **Create scripts only when needed**: For persistent behaviors, use `Script_CreateOrUpdate` with proper namespaces
+
+### ⚠️ CRITICAL: MCP Tool Usage Limitation
+**Only send ONE MCP tool request at a time.** The Unity MCP server can crash when multiple requests are sent simultaneously. Always wait for one MCP tool call to complete before invoking another. Do NOT call multiple `mcp_ai-game-devel_*` tools in parallel.
 
 ### MCP + MR Motifs Example Patterns
 ```csharp
@@ -132,8 +154,10 @@ public class PassthroughFader : MonoBehaviour
 - Multiplayer testing: Use ParrelSync for multiple editor instances
 
 ## Common Patterns to Follow
-1. Use `FindAnyObjectByType<T>()` for singleton discovery (Unity 6 pattern)
-2. Await spatial anchor operations before proceeding
-3. Parent remote avatars to "object of interest" for synchronized movement
-4. Use UnityEvents for fade callbacks and interaction hooks
-5. Shader render queue `Transparent-1 (2999)` for passthrough spheres with `Cull Off`
+1. **Simplicity first** - Always choose the simplest solution that works
+2. Use `FindAnyObjectByType<T>()` for singleton discovery (Unity 6 pattern)
+3. Await spatial anchor operations before proceeding
+4. Parent remote avatars to "object of interest" for synchronized movement
+5. Use UnityEvents for fade callbacks and interaction hooks
+6. Shader render queue `Transparent-1 (2999)` for passthrough spheres with `Cull Off`
+7. **Avoid over-engineering** - Don't add complexity unless absolutely necessary

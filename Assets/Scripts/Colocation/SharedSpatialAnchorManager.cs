@@ -44,6 +44,24 @@ namespace MRMotifs.ColocatedExperiences.Colocation
         private OVRCameraRig m_cameraRig;
         private bool m_waitingForPlacement = false;
         private GameObject m_placementIndicator;
+        private bool m_colocationEstablished = false;
+
+        /// <summary>
+        /// Gets the shared anchor group ID used for colocation and room sharing.
+        /// </summary>
+        public Guid SharedAnchorGroupId => m_sharedAnchorGroupId;
+
+        /// <summary>
+        /// Returns true if the colocation session has been established (host advertised or guest discovered).
+        /// </summary>
+        public bool IsColocationEstablished => m_colocationEstablished;
+
+        /// <summary>
+        /// Event fired when the colocation session is established.
+        /// Host: fired after advertisement starts successfully.
+        /// Guest: fired after session is discovered.
+        /// </summary>
+        public event Action<Guid> OnColocationSessionEstablished;
 
         public override void Spawned()
         {
@@ -107,7 +125,11 @@ namespace MRMotifs.ColocatedExperiences.Colocation
             if (startAdvertisementResult.Success)
             {
                 m_sharedAnchorGroupId = startAdvertisementResult.Value;
+                m_colocationEstablished = true;
                 Debug.Log($"Motif: Advertisement started successfully. UUID: {m_sharedAnchorGroupId}");
+
+                // Notify listeners that colocation session is established
+                OnColocationSessionEstablished?.Invoke(m_sharedAnchorGroupId);
 
                 // Handle placement based on mode
                 switch (m_anchorPlacementMode)
@@ -198,10 +220,14 @@ namespace MRMotifs.ColocatedExperiences.Colocation
             OVRColocationSession.ColocationSessionDiscovered -= OnColocationSessionDiscovered;
 
             m_sharedAnchorGroupId = session.AdvertisementUuid;
+            m_colocationEstablished = true;
             
             // Log discovery duration for metrics
             TimeSpan discoveryDuration = DateTime.Now - m_discoveryStartTime;
             Debug.Log($"Motif: Discovered session with UUID: {m_sharedAnchorGroupId}. Discovery time: {discoveryDuration.TotalSeconds:F2}s");
+            
+            // Notify listeners that colocation session is established
+            OnColocationSessionEstablished?.Invoke(m_sharedAnchorGroupId);
             
             LoadAndAlignToAnchor(m_sharedAnchorGroupId);
         }

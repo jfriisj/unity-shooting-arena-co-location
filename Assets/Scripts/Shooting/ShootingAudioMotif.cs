@@ -26,6 +26,10 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [SerializeField] private AudioClip m_deathClip;
         [SerializeField] private AudioClip m_respawnClip;
         [SerializeField] private AudioClip m_fireClip;
+        [SerializeField] private AudioClip m_reloadClip;
+        [SerializeField] private AudioClip m_hitMarkerClip;
+        [SerializeField] private AudioClip m_pullWeaponClip;
+        [SerializeField] private AudioClip m_playerHitClip;
 
         public AudioClip RoundStartClip => m_roundStartClip;
         public AudioClip RoundEndClip => m_roundEndClip;
@@ -34,6 +38,10 @@ namespace MRMotifs.SharedActivities.ShootingSample
         public AudioClip DeathClip => m_deathClip;
         public AudioClip RespawnClip => m_respawnClip;
         public AudioClip FireClip => m_fireClip;
+        public AudioClip ReloadClip => m_reloadClip;
+        public AudioClip HitMarkerClip => m_hitMarkerClip;
+        public AudioClip PullWeaponClip => m_pullWeaponClip;
+        public AudioClip PlayerHitClip => m_playerHitClip;
 
         private void Awake()
         {
@@ -51,7 +59,19 @@ namespace MRMotifs.SharedActivities.ShootingSample
             m_hitClip = LoadClip("Audio/Hit");
             m_deathClip = LoadClip("Audio/Death");
             m_respawnClip = LoadClip("Audio/Respawn");
-            m_fireClip = LoadClip("Audio/Fire");
+            
+            // Try Easy FPS shot sound first, fall back to Fire
+            m_fireClip = LoadClip("Audio/ShotSound");
+            if (m_fireClip == null) m_fireClip = LoadClip("Audio/Fire");
+            
+            // Easy FPS additional sounds
+            m_reloadClip = LoadClip("Audio/ReloadSound");
+            m_hitMarkerClip = LoadClip("Audio/HitMarker");
+            m_pullWeaponClip = LoadClip("Audio/PullWeapon");
+            m_playerHitClip = LoadClip("Audio/PlayerHit");
+            
+            // Use Die from Easy FPS if Death not available
+            if (m_deathClip == null) m_deathClip = LoadClip("Audio/Die");
 
             int loadedCount = 0;
             if (m_roundStartClip != null) loadedCount++;
@@ -61,8 +81,12 @@ namespace MRMotifs.SharedActivities.ShootingSample
             if (m_deathClip != null) loadedCount++;
             if (m_respawnClip != null) loadedCount++;
             if (m_fireClip != null) loadedCount++;
+            if (m_reloadClip != null) loadedCount++;
+            if (m_hitMarkerClip != null) loadedCount++;
+            if (m_pullWeaponClip != null) loadedCount++;
+            if (m_playerHitClip != null) loadedCount++;
 
-            Debug.Log($"[ShootingAudioMotif] Loaded {loadedCount}/7 audio clips from Resources/Audio/");
+            Debug.Log($"[ShootingAudioMotif] Loaded {loadedCount}/11 audio clips from Resources/Audio/");
         }
 
         private AudioClip LoadClip(string path)

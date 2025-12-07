@@ -15,10 +15,21 @@ namespace MRMotifs.ColocatedExperiences.Colocation
         private float m_currentCalibrationError = 0f;
         private Vector3 m_anchorPosition;
         private bool m_hasCalibrated = false;
+        private bool m_isAligned = false;
         
         // Reference position for drift tracking (camera rig position after calibration)
         private Vector3 m_referenceRigPosition;
         private bool m_isHost = false;
+
+        // Events for startup flow
+        public event System.Action OnAlignmentComplete;
+        public event System.Action<string> OnAlignmentFailed;
+
+        /// <summary>
+        /// Returns true if the user has been aligned to the shared anchor.
+        /// For hosts, this is true after anchor creation. For clients, after localization.
+        /// </summary>
+        public bool IsAligned => m_isAligned;
 
         private void Awake()
         {
@@ -36,9 +47,13 @@ namespace MRMotifs.ColocatedExperiences.Colocation
             m_referenceRigPosition = m_cameraRigTransform.position;
             m_isHost = true;
             m_hasCalibrated = true;
+            m_isAligned = true;
             m_currentCalibrationError = 0f; // Host has 0 initial error (they define the origin)
             
             Debug.Log($"Motif: Host calibration registered. Anchor at {anchorPosition}, Rig at {m_referenceRigPosition}");
+            
+            // Notify listeners
+            OnAlignmentComplete?.Invoke();
             
             // Notify CalibrationAccuracyTracker if present
             var calibrationTracker = FindAnyObjectByType<MRMotifs.SharedActivities.Metrics.CalibrationAccuracyTracker>();
@@ -76,12 +91,16 @@ namespace MRMotifs.ColocatedExperiences.Colocation
             m_referenceRigPosition = m_cameraRigTransform.position;
             m_isHost = false;
             m_hasCalibrated = true;
+            m_isAligned = true;
             
             // Initial calibration error is 0 - we just aligned to the anchor
             // The "error" was the pre-alignment offset, but that's now corrected
             m_currentCalibrationError = 0f;
 
             Debug.Log($"Motif: Client alignment complete. Rig moved from {m_preAlignmentPosition} to {m_referenceRigPosition}");
+            
+            // Notify listeners
+            OnAlignmentComplete?.Invoke();
             
             // Notify CalibrationAccuracyTracker if present
             var calibrationTracker = FindAnyObjectByType<MRMotifs.SharedActivities.Metrics.CalibrationAccuracyTracker>();
@@ -128,6 +147,7 @@ namespace MRMotifs.ColocatedExperiences.Colocation
         {
             m_currentCalibrationError = 0f;
             m_hasCalibrated = false;
+            m_isAligned = false;
             m_isHost = false;
             Debug.Log("Motif: Calibration reset.");
         }

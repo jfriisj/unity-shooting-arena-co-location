@@ -26,8 +26,14 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [Tooltip("Visual effect prefab spawned on impact.")]
         [SerializeField] private GameObject m_hitEffectPrefab;
 
+        [Tooltip("Bullet hole decal prefab spawned on surface impact (Easy FPS bulletHole).")]
+        [SerializeField] private GameObject m_bulletHolePrefab;
+
         [Tooltip("Trail renderer for bullet trail effect.")]
         [SerializeField] private TrailRenderer m_trailRenderer;
+
+        [Tooltip("How long bullet holes stay before fading.")]
+        [SerializeField] private float m_bulletHoleLifetime = 10f;
 
         [Header("Audio")]
         [Tooltip("Sound played on impact.")]
@@ -125,8 +131,10 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
             // Check if we hit a player
             var playerHealth = collision.gameObject.GetComponentInParent<PlayerHealthMotif>();
+            bool hitPlayer = false;
             if (playerHealth != null)
             {
+                hitPlayer = true;
                 // Don't damage ourselves
                 if (playerHealth.OwnerPlayer != OwnerPlayer)
                 {
@@ -136,7 +144,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
             }
 
             // Spawn hit effect and despawn
-            SpawnHitEffectRpc(collision.contacts[0].point, collision.contacts[0].normal);
+            SpawnHitEffectRpc(collision.contacts[0].point, collision.contacts[0].normal, hitPlayer);
             DespawnBullet();
         }
 
@@ -151,8 +159,10 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
             // Check if we hit a player
             var playerHealth = other.GetComponentInParent<PlayerHealthMotif>();
+            bool hitPlayer = false;
             if (playerHealth != null)
             {
+                hitPlayer = true;
                 // Don't damage ourselves
                 if (playerHealth.OwnerPlayer != OwnerPlayer)
                 {
@@ -161,17 +171,30 @@ namespace MRMotifs.SharedActivities.ShootingSample
             }
 
             // Spawn hit effect and despawn
-            SpawnHitEffectRpc(transform.position, -transform.forward);
+            SpawnHitEffectRpc(transform.position, -transform.forward, hitPlayer);
             DespawnBullet();
         }
 
         [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-        private void SpawnHitEffectRpc(Vector3 position, Vector3 normal)
+        private void SpawnHitEffectRpc(Vector3 position, Vector3 normal, NetworkBool hitPlayer)
         {
             if (m_hitEffectPrefab != null)
             {
                 var effect = Instantiate(m_hitEffectPrefab, position, Quaternion.LookRotation(normal));
                 Destroy(effect, 2f);
+            }
+
+            // Spawn bullet hole on surfaces (not on players)
+            if (!hitPlayer && m_bulletHolePrefab != null)
+            {
+                // Offset slightly from surface to prevent z-fighting
+                var holePosition = position + normal * 0.001f;
+                var bulletHole = Instantiate(m_bulletHolePrefab, holePosition, Quaternion.LookRotation(-normal));
+                
+                // Random rotation around normal for variety
+                bulletHole.transform.Rotate(0, 0, Random.Range(0f, 360f), Space.Self);
+                
+                Destroy(bulletHole, m_bulletHoleLifetime);
             }
 
             if (m_hitSound != null)
@@ -204,6 +227,23 @@ namespace MRMotifs.SharedActivities.ShootingSample
         public void SetDamage(int damageAmount)
         {
             m_damage = damageAmount;
+        }
+
+        /// <summary>
+        /// Set the bullet hole prefab for surface impacts.
+        /// Use Easy FPS bulletHole.prefab for decal effects.
+        /// </summary>
+        public void SetBulletHolePrefab(GameObject prefab)
+        {
+            m_bulletHolePrefab = prefab;
+        }
+
+        /// <summary>
+        /// Set the hit effect prefab for impact visuals.
+        /// </summary>
+        public void SetHitEffectPrefab(GameObject prefab)
+        {
+            m_hitEffectPrefab = prefab;
         }
     }
 }

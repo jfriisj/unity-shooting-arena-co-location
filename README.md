@@ -213,6 +213,7 @@ $ADB -s <serial> pull /sdcard/Android/data/com.jJFiisJ.ArenaShooting/files/metri
 1. ~~MetricsLogger network state detection~~ - Fixed using `NetworkRunner.Instances`
 2. ~~Calibration error discrepancy~~ - Fixed with `RegisterHostCalibration()`
 3. ~~Metrics validation~~ - All 10 metrics verified as real data sources
+4. ~~Guided Startup Flow~~ - Implemented modal system to guide Host/Client initialization
 
 ### Ready for Research
 - **Data Collection**: System is ready to collect research metrics
@@ -225,6 +226,195 @@ $ADB -s <serial> pull /sdcard/Android/data/com.jJFiisJ.ArenaShooting/files/metri
 
 ---
 
+## 🔄 Guided Startup Flow (Host vs Client)
+
+The game implements a **Guided Startup Modal System** that ensures proper initialization order and prevents race conditions between networking, colocation, and avatar spawning.
+
+### Why This Flow Exists
+
+Previous issues included:
+- `SpawnManagerMotif is null` - Avatar spawned before network objects were ready
+- `Avatar was destroyed before setup completed` - Race conditions in initialization
+- Calibration errors - Client attempted alignment before anchor was shared
+
+The Guided Startup Flow solves these by **gating each step** and showing clear progress to the user.
+
+### Startup States
+
+```
+Initializing → RoomScan → Networking → Colocation → RoomSharing → Ready
+```
+
+Each state must complete before advancing. If any step fails, an error is shown with retry option.
+
+### Host Flow (First Player to Join)
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                       HOST FLOW                                │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  1. INITIALIZING                                               │
+│     └─ "Initializing platform..."                              │
+│     └─ Wait for Oculus Platform SDK init                       │
+│                                                                │
+│  2. ROOM SCAN                                                  │
+│     └─ "Checking room scan..."                                 │
+│     ├─ If room exists → "Room found!" → Continue               │
+│     └─ If no room → "Please scan your room" → Wait for scan    │
+│                                                                │
+│  3. NETWORKING                                                 │
+│     └─ "Creating session..."                                   │
+│     └─ Wait for NetworkRunner to spawn                         │
+│     └─ "Session created!"                                      │
+│                                                                │
+│  4. COLOCATION                                                 │
+│     └─ "Creating spatial anchor..."                            │
+│     └─ SharedSpatialAnchorManager creates anchor               │
+│     └─ ColocationManager.RegisterHostCalibration() called      │
+│     └─ "Anchor ready!"                                         │
+│                                                                │
+│  5. ROOM SHARING (Optional)                                    │
+│     └─ "Sharing room mesh..."                                  │
+│     └─ RoomSharingMotif.ShareRoomAsync() if enabled            │
+│     └─ "Room shared!"                                          │
+│                                                                │
+│  6. READY                                                      │
+│     └─ "Ready to play!"                                        │
+│     └─ Modal hides                                             │
+│     └─ Avatar spawning is now permitted                        │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+```
+
+### Client Flow (Joining Existing Session)
+
+```
+┌────────────────────────────────────────────────────────────────┐
+│                       CLIENT FLOW                              │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│  1. INITIALIZING                                               │
+│     └─ "Initializing platform..."                              │
+│     └─ Wait for Oculus Platform SDK init                       │
+│                                                                │
+│  2. ROOM SCAN                                                  │
+│     └─ "Checking room scan..."                                 │
+│     └─ Client needs their own room scan for collisions         │
+│     └─ "Room found!"                                           │
+│                                                                │
+│  3. NETWORKING                                                 │
+│     └─ "Joining session..."                                    │
+│     └─ Wait for NetworkRunner to connect                       │
+│     └─ "Connected to session!"                                 │
+│                                                                │
+│  4. COLOCATION                                                 │
+│     └─ "Waiting for host anchor..."                            │
+│     └─ SharedSpatialAnchorManager discovers session via BT     │
+│     └─ "Anchor received!"                                      │
+│     └─ "Aligning to host's space..."                           │
+│     └─ ColocationManager.AlignUserToAnchor() called            │
+│     └─ "Aligned!"                                              │
+│                                                                │
+│  5. ROOM SHARING (Optional)                                    │
+│     └─ "Loading host's room mesh..."                           │
+│     └─ RoomSharingMotif loads shared room                      │
+│     └─ "Room loaded!"                                          │
+│                                                                │
+│  6. READY                                                      │
+│     └─ "Ready to play!"                                        │
+│     └─ Modal hides                                             │
+│     └─ Avatar spawning is now permitted                        │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+```
+
+### Key Differences: Host vs Client
+
+| Step | Host | Client |
+|------|------|--------|
+| Room Scan | **Required** - Must scan room before creating anchor | **Required** - Needs local scan for physics/collisions |
+| Networking | Creates session (IsSharedModeMasterClient = true) | Joins existing session |
+| Colocation | Creates anchor, calls `RegisterHostCalibration()` | Discovers anchor, calls `AlignUserToAnchor()` |
+| Room Sharing | Shares room mesh via MRUK | Loads shared room mesh from host |
+| Timing | Must complete before client can join | Must wait for host at each step |
+
+### Implementation Components
+
+| Component | File | Responsibility |
+|-----------|------|----------------|
+| `GameStartupManagerMotif` | `Scripts/Startup/GameStartupManagerMotif.cs` | Orchestrates entire startup flow |
+| `StartupModalUI` | `Scripts/Startup/StartupModalUI.cs` | UI display (status, progress, errors) |
+| `StartupFlowConfig` | `Scripts/Startup/StartupFlowConfig.cs` | ScriptableObject for timeout/config |
+| `StartupState` enum | `Scripts/Startup/GameStartupManagerMotif.cs` | State machine states |
+
+### Events and Integration Points
+
+The startup system integrates with existing components via events:
+
+```csharp
+// ColocationManager
+public event Action OnAlignmentComplete;      // Fired when client aligns to anchor
+public bool IsAligned { get; }                // True after alignment
+
+// RoomSharingMotif  
+public event Action OnRoomShared;             // Fired when host shares room
+public event Action OnRoomLoaded;             // Fired when client loads room
+public event Action<string> OnRoomSharingFailed;  // Fired on error
+
+// SharedSpatialAnchorManager
+public event Action<Guid> OnColocationSessionEstablished;  // Fired when anchor is ready
+public bool IsColocationEstablished { get; }               // True after anchor setup
+```
+
+### Avatar Spawning Gate
+
+`AvatarSpawnerHandlerMotif` now waits for startup to complete:
+
+```csharp
+// Before spawning avatar
+if (m_startupManager != null)
+{
+    while (!m_startupManager.IsStartupComplete)
+    {
+        if (m_startupManager.CurrentState == StartupState.Error)
+        {
+            yield break; // Abort spawn on error
+        }
+        yield return new WaitForSeconds(0.5f);
+    }
+}
+// Now safe to spawn avatar
+```
+
+### Timeout Configuration
+
+Default timeouts (configurable via `StartupFlowConfig`):
+
+| Step | Default Timeout | Notes |
+|------|-----------------|-------|
+| Room Scan | 30s | User may need to scan |
+| Networking | 15s | Session creation/join |
+| Colocation | 45s | Anchor discovery via Bluetooth |
+| Room Sharing | 30s | MRUK room mesh transfer |
+
+### Error Handling
+
+When a step fails:
+1. Modal shows error message in red
+2. "Retry" button appears
+3. User can retry the failed step
+4. If skip is allowed (room sharing), continues without that feature
+
+### Testing the Flow
+
+1. **Host Test**: Start app on first device, watch modal progress through all steps
+2. **Client Test**: Start app on second device, verify it waits for host anchor
+3. **Timeout Test**: Disable WiFi/Bluetooth and verify timeout messages appear
+4. **Retry Test**: Force a failure and verify retry button works
+
+---
+
 ## 📁 Project Structure
 
 ```
@@ -233,29 +423,44 @@ Assets/
 │   ├── Avatar/                 # Avatar handling
 │   │   ├── AvatarMovementHandlerMotif.cs    # Position sync via object-of-interest
 │   │   ├── AvatarNameTagHandlerMotif.cs     # Player name tags above heads
-│   │   └── AvatarSpawnerHandlerMotif.cs     # Avatar spawn handling
+│   │   └── AvatarSpawnerHandlerMotif.cs     # Avatar spawn handling (integrates with startup)
 │   ├── Shooting/               # Core shooting mechanics
-│   │   ├── BulletMotif.cs                   # Networked projectile with physics
 │   │   ├── BoundaryDisablerMotif.cs         # Guardian suppression for free movement
+│   │   ├── BulletMotif.cs                   # Networked projectile with physics
+│   │   ├── CoverSpawnerMotif.cs             # Spawns cover objects in play area
+│   │   ├── NetworkedCoverMotif.cs           # Networked cover object behavior
 │   │   ├── PlayerHealthMotif.cs             # Health, damage, death, respawn
+│   │   ├── PracticeModeMotif.cs             # Single-player practice with AI targets
+│   │   ├── ShootingAudioMotif.cs            # Game audio (round start, end, countdown)
+│   │   ├── ShootingDebugVisualizerMotif.cs  # Debug visualization (spawn points, boundaries)
+│   │   ├── ShootingGameConfigMotif.cs       # Centralized game configuration
 │   │   ├── ShootingGameManagerMotif.cs      # Game state machine, scoring
 │   │   ├── ShootingHUDMotif.cs              # Health bar, kills, death panel
 │   │   ├── ShootingPlayerMotif.cs           # Trigger input, bullet spawning
 │   │   └── ShootingSetupMotif.cs            # Attaches shooting to avatars
 │   ├── Spawning/               # Spawn system
 │   │   └── SpawnManagerMotif.cs             # Open play area spawning
+│   ├── Startup/                # Guided startup flow system
+│   │   ├── GameStartupManagerMotif.cs       # Orchestrates Host/Client initialization
+│   │   ├── StartupModalUI.cs                # Modal UI (status, progress, errors)
+│   │   ├── StartupFlowConfig.cs             # ScriptableObject for timeout config
+│   │   └── Editor/
+│   │       └── StartupFlowSetup.cs          # Editor utility for UI setup
 │   ├── Colocation/             # Co-location system
 │   │   ├── ColocationManager.cs             # Camera rig alignment + calibration tracking
+│   │   ├── RoomSharingMotif.cs              # Room mesh sharing (experimental, disabled)
+│   │   ├── RoomScanManager.cs               # Room scan validation
 │   │   └── SharedSpatialAnchorManager.cs    # Anchor creation/sharing (3 modes)
 │   ├── Network/                # Networking utilities
-│   │   └── HostMigrationHandlerMotif.cs     # Seamless host migration
+│   │   └── HostMigrationHandlerMotif.cs     # Seamless host migration (disabled)
 │   ├── Platform/               # Quest platform integration
 │   │   ├── GroupPresenceAndInviteHandlerMotif.cs  # Group presence
 │   │   └── InvitationAcceptanceHandlerMotif.cs    # Deep link invite handling
 │   └── Shared/                 # Shared utilities
 │       ├── Metrics/            # Research metrics collection
+│       │   ├── CalibrationAccuracyTracker.cs # Spatial drift monitoring
 │       │   ├── MetricsLogger.cs             # CSV logging (10 metrics @ 1Hz)
-│       │   └── CalibrationAccuracyTracker.cs # Spatial drift monitoring
+│       │   └── NetworkLatencyTracker.cs     # Network latency tracking
 │       └── HandleAnimationMotif.cs
 ├── Prefabs/
 │   ├── Shooting/
@@ -281,23 +486,40 @@ research-paper/
 
 ## 🎮 Scene Structure (`ShootingGame.unity`)
 
-| GameObject | Purpose |
-|------------|---------|
-| `[BuildingBlock] Camera Rig` | OVRCameraRig with tracking |
-| `[MR Motif] Arena` | Reference point for avatar sync (child of Camera Rig) |
-| `[BuildingBlock] Passthrough` | MR passthrough layer |
-| `[BuildingBlock] Network Manager` | Fusion NetworkRunner (Shared Mode) |
-| `[BuildingBlock] Auto Matchmaking` | Auto session join for same-room play |
-| `[BuildingBlock] Platform Init` | Oculus Platform initialization |
-| `[BuildingBlock] Networked Avatar` | Meta Avatar spawning |
-| `[BuildingBlock] MR Utility Kit` | MRUK room scanning |
-| `[BuildingBlock] Colocation` | Colocation building block |
-| `[MR Motif] Spawn Manager` | Open play area spawning logic |
-| `[MR Motif] Shooting Game Manager` | Game state, rounds, scoring |
-| `[MR Motif] Shooting Setup` | Attaches shooting components to avatars |
-| `[MR Motif] Shooting HUD Canvas` | Player HUD (health, kills, death panel) |
-| `[MR Motifs] Colocation Manager` | Anchor alignment logic |
-| `[MR Motifs] SSA Manager` | Shared Spatial Anchor management |
+### Active GameObjects
+| GameObject | Purpose | Status |
+|------------|---------|--------|
+| `Directional Light` | Scene lighting | ✅ Active |
+| `[BuildingBlock] Camera Rig` | OVRCameraRig with tracking | ✅ Active |
+| `  └─ [MR Motif] Arena` | Reference point for avatar sync (child of Camera Rig) | ✅ Active |
+| `[BuildingBlock] Passthrough` | MR passthrough layer | ✅ Active |
+| `[BuildingBlock] Network Manager` | Fusion NetworkRunner (Shared Mode) | ✅ Active |
+| `[BuildingBlock] Auto Matchmaking` | Auto session join for same-room play | ✅ Active |
+| `[BuildingBlock] Platform Init` | Oculus Platform initialization | ✅ Active |
+| `[BuildingBlock] Networked Avatar` | Meta Avatar spawning | ✅ Active |
+| `[BuildingBlock] MR Utility Kit` | MRUK room scanning | ✅ Active |
+| `[BuildingBlock] Colocation` | Colocation building block | ✅ Active |
+| `[MR Motif] Game Startup Manager` | Guided startup flow orchestration | ✅ Active |
+| `[MR Motif] Shooting Game Manager` | Game state, rounds, scoring | ✅ Active |
+| `[MR Motif] Spawn Manager` | Open play area spawning logic | ✅ Active |
+| `[MR Motif] Avatar Spawner Handler` | Avatar spawn event handling | ✅ Active |
+| `[MR Motif] Shooting Setup` | Attaches shooting components to avatars | ✅ Active |
+| `[MR Motif] Group Presence` | Meta Platform group presence | ✅ Active |
+| `[MR Motif] Shooting HUD Canvas` | Player HUD (health, kills, death panel) | ✅ Active |
+| `[MR Motifs] Colocation Manager` | Anchor alignment + calibration tracking | ✅ Active |
+| `[MR Motifs] SSA Manager` | Shared Spatial Anchor management | ✅ Active |
+| `[MR Motif] Practice Mode` | Single-player practice with AI targets | ✅ Active |
+| `[MR Motif] Cover Spawner` | Spawns cover objects in play area | ✅ Active |
+| `[MR Motif] Metrics Logger` | Research metrics CSV logging @ 1Hz | ✅ Active |
+| `[MR Motif] Network Metrics` | Network performance metrics | ✅ Active |
+
+### Disabled GameObjects
+| GameObject | Purpose | Reason Disabled |
+|------------|---------|-----------------|
+| `[BuildingBlock] Scene Mesh` | Room mesh visualization | Conflicts with colocation flow |
+| `[BuildingBlock] Scene Debugger` | Debug UI tool | Development only |
+| `VoiceLogger` (x2) | Voice chat logging | Voice not in MVP |
+| `[MR Motif] Room Sharing` | Room mesh sharing | Experimental feature |
 
 ---
 
@@ -424,6 +646,32 @@ These are Meta SDK provided building blocks. They are self-contained systems and
 ### MR Motif GameObjects (Custom Game Logic)
 
 These are custom game components. Each should have ONE clear responsibility.
+
+#### `[MR Motif] Game Startup Manager`
+| Component | Namespace | Responsibility | NetworkObject? |
+|-----------|-----------|----------------|----------------|
+| `GameStartupManagerMotif` | MRMotifs.SharedActivities.Startup | Orchestrates Host/Client initialization flow | MonoBehaviour |
+
+**Single Responsibility:** Guided startup flow orchestration.
+
+**Responsibilities:**
+- ✅ Gate each initialization step (Room Scan → Networking → Colocation → Room Sharing)
+- ✅ Show modal UI with progress and status updates
+- ✅ Differentiate Host vs Client flows
+- ✅ Provide `IsStartupComplete` flag for other systems to wait on
+- ✅ Handle errors with retry capability
+- ❌ NOT responsible for: actual initialization (delegates to RoomScanManager, ColocationManager, etc.)
+
+**Key Properties:**
+- `IsStartupComplete` - True when all steps are done and avatar can spawn
+- `CurrentState` - Current `StartupState` enum value
+- `IsHost` - True if this player is the session host
+
+**Configuration:**
+- Uses `StartupFlowConfig` ScriptableObject for timeouts
+- `m_enableRoomSharing` - Toggle room sharing step on/off
+
+---
 
 #### `[MR Motif] Shooting Game Manager`
 | Component | Namespace | Responsibility | NetworkObject? |
@@ -571,21 +819,46 @@ These are custom game components. Each should have ONE clear responsibility.
 
 ---
 
-#### `[MR Motif] Practice Mode` (Currently Disabled)
+#### `[MR Motif] Practice Mode`
 | Component | Namespace | Responsibility |
 |-----------|-----------|----------------|
-| `PracticeModeMotif` | MRMotifs | **[DISABLED]** Single-player practice with AI targets |
+| `PracticeModeMotif` | MRMotifs | Single-player practice with AI targets |
 
-**Status:** DISABLED - Missing `m_targetPrefab` reference. Re-enable after prefab is assigned.
+**Status:** ✅ ENABLED - Available for solo practice sessions.
+
+**Responsibilities:**
+- ✅ Spawn AI target dummies for practice
+- ✅ Provide solo warm-up mode
+- ❌ NOT responsible for: multiplayer game state, scoring
 
 ---
 
-#### `[MR Motif] Cover Spawner` (Currently Disabled)
+#### `[MR Motif] Cover Spawner`
 | Component | Namespace | Responsibility |
 |-----------|-----------|----------------|
-| `CoverSpawnerMotif` | MRMotifs | **[DISABLED]** Spawns cover objects in play area |
+| `CoverSpawnerMotif` | MRMotifs | Spawns cover objects in play area |
 
-**Status:** DISABLED - Missing `m_previewMaterial` and `m_placeSound` references.
+**Status:** ✅ ENABLED - Provides dynamic cover during gameplay.
+
+**Responsibilities:**
+- ✅ Create cover objects for players to hide behind
+- ✅ Works with `NetworkedCoverMotif` for networked cover
+- ❌ NOT responsible for: bullet physics, game state
+
+---
+
+#### `[MR Motif] Network Metrics`
+| Component | Namespace | Responsibility |
+|-----------|-----------|----------------|
+| `NetworkLatencyTracker` | MRMotifs | Tracks network performance metrics |
+
+**Status:** ✅ ENABLED - Monitors network health for research.
+
+**Responsibilities:**
+- ✅ Track RTT (round-trip time) per player
+- ✅ Monitor packet loss
+- ✅ Feed data to MetricsLogger
+- ❌ NOT responsible for: game logic, display
 
 ---
 
@@ -620,43 +893,37 @@ These are custom game components. Each should have ONE clear responsibility.
 
 ---
 
-### Disabled/Inactive Objects
-
-| GameObject | Status | Reason |
-|------------|--------|--------|
-| `[BuildingBlock] Scene Mesh` | DISABLED | Conflicts with colocation flow |
-| `[BuildingBlock] Scene Debugger` | DISABLED | Debug tool only |
-| `VoiceLogger` (x2) | DISABLED | Voice chat not in MVP |
-| `[MR Motif] Room Sharing` | DISABLED | Experimental room mesh sharing |
-
----
-
 ### Component Responsibility Matrix
 
 | Responsibility | Owner Component | Location |
 |----------------|-----------------|----------|
 | **Networking** | | |
 | Session management | `NetworkRunner` | [BuildingBlock] Network Manager |
-| Host migration | `HostMigrationHandlerMotif` | [BuildingBlock] Network Manager |
-| Latency tracking | `NetworkLatencyTracker` | [BuildingBlock] Network Manager |
+| Host migration | `HostMigrationHandlerMotif` | [BuildingBlock] Network Manager *(disabled)* |
 | **Colocation** | | |
 | Colocation orchestration | `ColocationController` | [BuildingBlock] Colocation |
 | Anchor creation/discovery | `SharedSpatialAnchorManager` | [MR Motifs] SSA Manager |
 | Camera rig alignment | `ColocationManager` | [MR Motifs] Colocation Manager |
-| Room mesh sharing | `RoomSharingMotif` | [BuildingBlock] Colocation *(disabled)* |
+| Room mesh sharing | `RoomSharingMotif` | [MR Motif] Room Sharing *(disabled)* |
 | **Game State** | | |
 | State machine | `ShootingGameManagerMotif` | [MR Motif] Shooting Game Manager |
 | Scoring | `ShootingGameManagerMotif` | [MR Motif] Shooting Game Manager |
 | Round timing | `ShootingGameManagerMotif` | [MR Motif] Shooting Game Manager |
+| Game audio | `ShootingAudioMotif` | [MR Motif] Shooting Game Manager |
+| Game configuration | `ShootingGameConfigMotif` | [MR Motif] Shooting Game Manager |
+| Debug visualization | `ShootingDebugVisualizerMotif` | [MR Motif] Shooting Game Manager |
 | **Avatars** | | |
 | Avatar instantiation | `AvatarSpawnerFusion` | [BuildingBlock] Networked Avatar |
 | Avatar spawn handling | `AvatarSpawnerHandlerMotif` | [MR Motif] Avatar Spawner Handler |
 | Avatar position sync | `AvatarMovementHandlerMotif` | On spawned avatar prefab |
+| Avatar name tags | `AvatarNameTagHandlerMotif` | On spawned avatar prefab |
 | **Combat** | | |
 | Component attachment | `ShootingSetupMotif` | [MR Motif] Shooting Setup |
 | Weapon input/bullets | `ShootingPlayerMotif` | Attached to avatar at runtime |
 | Health/damage | `PlayerHealthMotif` | Attached to avatar at runtime |
 | Bullet physics | `BulletMotif` | BulletMotif.prefab |
+| Cover objects | `CoverSpawnerMotif` | [MR Motif] Cover Spawner |
+| Networked cover | `NetworkedCoverMotif` | On spawned cover prefab |
 | **UI** | | |
 | HUD display | `ShootingHUDMotif` | [MR Motif] Shooting HUD Canvas |
 | **Spawning** | | |
@@ -664,6 +931,13 @@ These are custom game components. Each should have ONE clear responsibility.
 | **Platform** | | |
 | Platform init | `PlatformInit_` | [BuildingBlock] Platform Init |
 | Group presence | `GroupPresenceAndInviteHandlerMotif` | [MR Motif] Group Presence |
+| Boundary suppression | `BoundaryDisablerMotif` | [BuildingBlock] Camera Rig |
+| **Practice** | | |
+| Solo practice mode | `PracticeModeMotif` | [MR Motif] Practice Mode |
+| **Metrics/Research** | | |
+| CSV metrics logging | `MetricsLogger` | [MR Motif] Metrics Logger |
+| Calibration drift tracking | `CalibrationAccuracyTracker` | [MR Motif] Metrics Logger |
+| Network latency tracking | `NetworkLatencyTracker` | [MR Motif] Network Metrics |
 
 ---
 

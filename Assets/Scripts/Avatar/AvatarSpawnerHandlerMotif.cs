@@ -8,12 +8,15 @@ using Meta.XR.MultiplayerBlocks.Shared;
 using Meta.XR.MultiplayerBlocks.Fusion;
 using Meta.XR.Samples;
 using MRMotifs.SharedActivities.Spawning;
+using MRMotifs.SharedActivities.Startup;
 
 namespace MRMotifs.SharedActivities.Avatars
 {
     /// <summary>
     /// Handles the spawning of avatars in the scene, managing their positions using the spawn manager.
     /// Also, responsible for releasing spawn locations when players leave the scene.
+    /// 
+    /// Avatar spawning is gated on GameStartupManagerMotif completing its flow to prevent race conditions.
     /// </summary>
     [MetaCodeSample("MRMotifs-SharedActivities")]
     public class AvatarSpawnerHandlerMotif : MonoBehaviour
@@ -23,12 +26,18 @@ namespace MRMotifs.SharedActivities.Avatars
         private SpawnManagerMotif spawnManagerMotif;
 
         private NetworkRunner m_networkRunner;
+        private GameStartupManagerMotif m_startupManager;
 
         private void Awake()
         {
             FusionBBEvents.OnSceneLoadDone += OnLoaded;
             AvatarEntity.OnSpawned += HandleAvatarSpawned;
             FusionBBEvents.OnPlayerLeft += FreeSpawnLocation;
+        }
+
+        private void Start()
+        {
+            m_startupManager = FindAnyObjectByType<GameStartupManagerMotif>();
         }
 
         private void OnDestroy()
@@ -50,14 +59,61 @@ namespace MRMotifs.SharedActivities.Avatars
 
         private IEnumerator WaitForSpawnedAndEnqueue(AvatarEntity avatarEntity)
         {
+            // Wait for startup manager to complete its flow (room scan, colocation, etc.)
+            if (m_startupManager == null)
+            {
+                m_startupManager = FindAnyObjectByType<GameStartupManagerMotif>();
+            }
+
+            if (m_startupManager != null)
+            {
+                Debug.Log("[AvatarSpawnerHandlerMotif] Waiting for startup flow to complete...");
+                float startupTimeout = 60f;
+                float startupElapsed = 0f;
+                while (!m_startupManager.IsStartupComplete && startupElapsed < startupTimeout)
+                {
+                    if (m_startupManager.CurrentState == StartupState.Error)
+                    {
+                        Debug.LogWarning("[AvatarSpawnerHandlerMotif] Startup flow failed, aborting avatar spawn");
+                        yield break;
+                    }
+                    yield return new WaitForSeconds(0.5f);
+                    startupElapsed += 0.5f;
+                }
+
+                if (!m_startupManager.IsStartupComplete)
+                {
+                    Debug.LogWarning("[AvatarSpawnerHandlerMotif] Startup flow timed out, proceeding anyway");
+                }
+                else
+                {
+                    Debug.Log("[AvatarSpawnerHandlerMotif] Startup flow complete, proceeding with avatar spawn");
+                }
+            }
+
             // Additional delay required since Avatars v28+ require some additional time to be loaded
             // No event to await the full "readiness" of the avatar is available yet
             yield return new WaitForSeconds(1.5f);
 
-            // Check if spawnManagerMotif is available
+            // Check if spawnManagerMotif is available - try to find it if null
             if (spawnManagerMotif == null)
             {
-                Debug.LogWarning("[AvatarSpawnerHandlerMotif] SpawnManagerMotif is null, cannot enqueue player for spawn");
+                spawnManagerMotif = FindAnyObjectByType<SpawnManagerMotif>();
+            }
+
+            // Wait for SpawnManagerMotif to exist (network object may spawn later)
+            float timeout = 10f;
+            float elapsed = 0f;
+            while (spawnManagerMotif == null && elapsed < timeout)
+            {
+                yield return new WaitForSeconds(0.5f);
+                elapsed += 0.5f;
+                spawnManagerMotif = FindAnyObjectByType<SpawnManagerMotif>();
+            }
+
+            if (spawnManagerMotif == null)
+            {
+                Debug.LogWarning("[AvatarSpawnerHandlerMotif] SpawnManagerMotif not found after timeout, cannot enqueue player for spawn");
                 yield break;
             }
 
