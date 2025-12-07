@@ -5,7 +5,7 @@ using Fusion;
 using UnityEngine;
 using Meta.XR.Samples;
 using Meta.XR.MultiplayerBlocks.Fusion;
-using MRMotifs.SharedActivities.Startup;
+using MRMotifs.ColocatedExperiences.Colocation;
 
 namespace MRMotifs.SharedActivities.ShootingSample
 {
@@ -82,7 +82,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private Transform m_leftMuzzle;
         private NetworkRunner m_networkRunner;
         private AudioSource m_spawnedAudioSource;
-        private GameStartupManagerMotif m_startupManager;
+        private ColocationStartup m_colocationStartup;
         private bool m_weaponsVisible = false;
 
         /// <summary>
@@ -132,35 +132,35 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 SetWeaponsVisible(false);
             }
             
-            // Subscribe to startup complete event to show weapons
-            m_startupManager = FindAnyObjectByType<GameStartupManagerMotif>();
-            if (m_startupManager != null)
+            // Subscribe to colocation startup complete event to show weapons
+            m_colocationStartup = FindAnyObjectByType<ColocationStartup>();
+            if (m_colocationStartup != null)
             {
-                if (m_startupManager.IsStartupComplete)
+                if (m_colocationStartup.IsReady)
                 {
-                    // Startup already complete, show weapons immediately
+                    // Colocation already complete, show weapons immediately
                     SetWeaponsVisible(true);
-                    Debug.Log("[ShootingPlayerMotif] Started - startup already complete, weapons visible");
+                    Debug.Log("[ShootingPlayerMotif] Started - colocation already ready, weapons visible");
                 }
                 else
                 {
-                    // Wait for startup to complete
-                    m_startupManager.OnStartupComplete += OnStartupComplete;
-                    Debug.Log("[ShootingPlayerMotif] Started - waiting for startup complete to show weapons");
+                    // Wait for colocation to complete
+                    m_colocationStartup.OnColocationReady += OnColocationReady;
+                    Debug.Log("[ShootingPlayerMotif] Started - waiting for colocation ready to show weapons");
                 }
             }
             else
             {
-                // No startup manager, show weapons immediately (fallback)
+                Debug.LogError("[ShootingPlayerMotif] ColocationStartup NOT FOUND. " +
+                    "Weapons will be shown immediately but this may cause issues. Check scene setup.");
                 SetWeaponsVisible(true);
-                Debug.Log("[ShootingPlayerMotif] Started - no startup manager, weapons visible");
             }
         }
 
-        private void OnStartupComplete()
+        private void OnColocationReady()
         {
             SetWeaponsVisible(true);
-            Debug.Log("[ShootingPlayerMotif] Startup complete - weapons now visible, ray helpers disabled");
+            Debug.Log("[ShootingPlayerMotif] Colocation ready - weapons now visible, laser pointers disabled");
         }
 
         private void SetWeaponsVisible(bool visible)
@@ -202,10 +202,10 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
         private void OnDestroy()
         {
-            // Unsubscribe from startup event
-            if (m_startupManager != null)
+            // Unsubscribe from colocation event
+            if (m_colocationStartup != null)
             {
-                m_startupManager.OnStartupComplete -= OnStartupComplete;
+                m_colocationStartup.OnColocationReady -= OnColocationReady;
             }
             
             // Restore controller visibility when this component is destroyed

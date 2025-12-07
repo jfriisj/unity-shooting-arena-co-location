@@ -8,7 +8,7 @@ using Meta.XR.MultiplayerBlocks.Shared;
 using Meta.XR.MultiplayerBlocks.Fusion;
 using Meta.XR.Samples;
 using MRMotifs.SharedActivities.Spawning;
-using MRMotifs.SharedActivities.Startup;
+using MRMotifs.ColocatedExperiences.Colocation;
 
 namespace MRMotifs.SharedActivities.Avatars
 {
@@ -16,7 +16,7 @@ namespace MRMotifs.SharedActivities.Avatars
     /// Handles the spawning of avatars in the scene, managing their positions using the spawn manager.
     /// Also, responsible for releasing spawn locations when players leave the scene.
     /// 
-    /// Avatar spawning is gated on GameStartupManagerMotif completing its flow to prevent race conditions.
+    /// Avatar spawning is gated on ColocationStartup completing its flow.
     /// </summary>
     [MetaCodeSample("MRMotifs-SharedActivities")]
     public class AvatarSpawnerHandlerMotif : MonoBehaviour
@@ -25,19 +25,37 @@ namespace MRMotifs.SharedActivities.Avatars
         [SerializeField]
         private SpawnManagerMotif spawnManagerMotif;
 
+        [Tooltip("Timeout in seconds to wait for colocation startup to complete.")]
+        [SerializeField]
+        private float m_startupTimeout = 60f;
+
         private NetworkRunner m_networkRunner;
-        private GameStartupManagerMotif m_startupManager;
+        private ColocationStartup m_colocationStartup;
 
         private void Awake()
         {
             FusionBBEvents.OnSceneLoadDone += OnLoaded;
             AvatarEntity.OnSpawned += HandleAvatarSpawned;
             FusionBBEvents.OnPlayerLeft += FreeSpawnLocation;
+            
+            Debug.Log("[AvatarSpawnerHandlerMotif] Awake - event handlers registered");
         }
 
         private void Start()
         {
-            m_startupManager = FindAnyObjectByType<GameStartupManagerMotif>();
+            m_colocationStartup = FindAnyObjectByType<ColocationStartup>();
+            
+            if (m_colocationStartup == null)
+            {
+                Debug.LogError("[AvatarSpawnerHandlerMotif] ColocationStartup not found in scene! " +
+                    "Avatar spawning will not be gated on colocation completion. " +
+                    "Ensure ColocationStartup component exists in the scene.");
+            }
+            else
+            {
+                Debug.Log($"[AvatarSpawnerHandlerMotif] Found ColocationStartup. " +
+                    $"IsReady: {m_colocationStartup.IsReady}, IsHost: {m_colocationStartup.IsHost}");
+            }
         }
 
         private void OnDestroy()
@@ -45,77 +63,96 @@ namespace MRMotifs.SharedActivities.Avatars
             FusionBBEvents.OnSceneLoadDone -= OnLoaded;
             AvatarEntity.OnSpawned -= HandleAvatarSpawned;
             FusionBBEvents.OnPlayerLeft -= FreeSpawnLocation;
+            
+            Debug.Log("[AvatarSpawnerHandlerMotif] OnDestroy - event handlers unregistered");
         }
 
         private void OnLoaded(NetworkRunner networkRunner)
         {
             m_networkRunner = networkRunner;
+            Debug.Log($"[AvatarSpawnerHandlerMotif] Network scene loaded. Runner: {networkRunner?.name}");
         }
 
         private void HandleAvatarSpawned(AvatarEntity avatarEntity)
         {
+            Debug.Log($"[AvatarSpawnerHandlerMotif] Avatar spawned: {avatarEntity?.name}");
             StartCoroutine(WaitForSpawnedAndEnqueue(avatarEntity));
         }
 
         private IEnumerator WaitForSpawnedAndEnqueue(AvatarEntity avatarEntity)
         {
-            // Wait for startup manager to complete its flow (room scan, colocation, etc.)
-            if (m_startupManager == null)
+            Debug.Log("[AvatarSpawnerHandlerMotif] Starting spawn enqueue process...");
+            
+            // Wait for colocation startup to complete
+            if (m_colocationStartup == null)
             {
-                m_startupManager = FindAnyObjectByType<GameStartupManagerMotif>();
+                m_colocationStartup = FindAnyObjectByType<ColocationStartup>();
             }
 
-            if (m_startupManager != null)
+            if (m_colocationStartup != null)
             {
-                Debug.Log("[AvatarSpawnerHandlerMotif] Waiting for startup flow to complete...");
-                float startupTimeout = 60f;
-                float startupElapsed = 0f;
-                while (!m_startupManager.IsStartupComplete && startupElapsed < startupTimeout)
+                Debug.Log($"[AvatarSpawnerHandlerMotif] Waiting for ColocationStartup. " +
+                    $"Current state: {m_colocationStartup.State}, IsReady: {m_colocationStartup.IsReady}");
+                
+                float elapsed = 0f;
+                while (!m_colocationStartup.IsReady && elapsed < m_startupTimeout)
                 {
-                    if (m_startupManager.CurrentState == StartupState.Error)
-                    {
-                        Debug.LogWarning("[AvatarSpawnerHandlerMotif] Startup flow failed, aborting avatar spawn");
-                        yield break;
-                    }
                     yield return new WaitForSeconds(0.5f);
-                    startupElapsed += 0.5f;
+                    elapsed += 0.5f;
+                    
+                    if (elapsed % 5f < 0.5f) // Log every 5 seconds
+                    {
+                        Debug.Log($"[AvatarSpawnerHandlerMotif] Still waiting... " +
+                            $"State: {m_colocationStartup.State}, Elapsed: {elapsed:F1}s/{m_startupTimeout}s");
+                    }
                 }
 
-                if (!m_startupManager.IsStartupComplete)
+                if (!m_colocationStartup.IsReady)
                 {
-                    Debug.LogWarning("[AvatarSpawnerHandlerMotif] Startup flow timed out, proceeding anyway");
+                    Debug.LogError($"[AvatarSpawnerHandlerMotif] ColocationStartup TIMEOUT after {m_startupTimeout}s. " +
+                        $"Final state: {m_colocationStartup.State}. Avatar spawn may fail.");
                 }
                 else
                 {
-                    Debug.Log("[AvatarSpawnerHandlerMotif] Startup flow complete, proceeding with avatar spawn");
+                    Debug.Log($"[AvatarSpawnerHandlerMotif] ColocationStartup ready! " +
+                        $"IsHost: {m_colocationStartup.IsHost}, GroupUuid: {m_colocationStartup.GroupUuid}");
                 }
+            }
+            else
+            {
+                Debug.LogError("[AvatarSpawnerHandlerMotif] ColocationStartup NOT FOUND. " +
+                    "Cannot gate avatar spawn on colocation. Check scene setup.");
             }
 
             // Additional delay required since Avatars v28+ require some additional time to be loaded
-            // No event to await the full "readiness" of the avatar is available yet
+            Debug.Log("[AvatarSpawnerHandlerMotif] Waiting 1.5s for avatar loading...");
             yield return new WaitForSeconds(1.5f);
 
-            // Check if spawnManagerMotif is available - try to find it if null
+            // Find SpawnManagerMotif
             if (spawnManagerMotif == null)
             {
                 spawnManagerMotif = FindAnyObjectByType<SpawnManagerMotif>();
+                Debug.Log($"[AvatarSpawnerHandlerMotif] SpawnManagerMotif search: {(spawnManagerMotif != null ? "Found" : "Not found")}");
             }
 
             // Wait for SpawnManagerMotif to exist (network object may spawn later)
-            float timeout = 10f;
-            float elapsed = 0f;
-            while (spawnManagerMotif == null && elapsed < timeout)
+            float spawnTimeout = 10f;
+            float spawnElapsed = 0f;
+            while (spawnManagerMotif == null && spawnElapsed < spawnTimeout)
             {
                 yield return new WaitForSeconds(0.5f);
-                elapsed += 0.5f;
+                spawnElapsed += 0.5f;
                 spawnManagerMotif = FindAnyObjectByType<SpawnManagerMotif>();
             }
 
             if (spawnManagerMotif == null)
             {
-                Debug.LogWarning("[AvatarSpawnerHandlerMotif] SpawnManagerMotif not found after timeout, cannot enqueue player for spawn");
+                Debug.LogError($"[AvatarSpawnerHandlerMotif] SpawnManagerMotif NOT FOUND after {spawnTimeout}s. " +
+                    "Cannot enqueue player for spawn. Check that SpawnManagerMotif is in the scene.");
                 yield break;
             }
+
+            Debug.Log($"[AvatarSpawnerHandlerMotif] SpawnManagerMotif found. HasSpawned: {spawnManagerMotif.HasSpawned}");
 
             while (!spawnManagerMotif.HasSpawned)
             {
@@ -123,19 +160,32 @@ namespace MRMotifs.SharedActivities.Avatars
             }
 
             var avatarNetworkObj = avatarEntity.gameObject.GetComponent<AvatarBehaviourFusion>();
-            if (avatarNetworkObj == null || !avatarNetworkObj.HasStateAuthority)
+            if (avatarNetworkObj == null)
             {
+                Debug.LogError($"[AvatarSpawnerHandlerMotif] AvatarBehaviourFusion NOT FOUND on avatar: {avatarEntity?.name}");
+                yield break;
+            }
+            
+            if (!avatarNetworkObj.HasStateAuthority)
+            {
+                Debug.Log($"[AvatarSpawnerHandlerMotif] Not state authority for avatar: {avatarEntity?.name}. Skipping spawn enqueue.");
                 yield break;
             }
 
+            Debug.Log($"[AvatarSpawnerHandlerMotif] Enqueueing player {m_networkRunner?.LocalPlayer} for spawn");
             yield return spawnManagerMotif.StartCoroutine(
                 spawnManagerMotif.EnqueuePlayerForSpawn(m_networkRunner.LocalPlayer, avatarNetworkObj));
+            
+            Debug.Log("[AvatarSpawnerHandlerMotif] Player spawn enqueue complete");
         }
 
         private void FreeSpawnLocation(NetworkRunner runner, PlayerRef player)
         {
+            Debug.Log($"[AvatarSpawnerHandlerMotif] FreeSpawnLocation called for player: {player}");
+            
             if (spawnManagerMotif == null)
             {
+                Debug.LogWarning("[AvatarSpawnerHandlerMotif] SpawnManagerMotif is null, cannot free spawn location");
                 return;
             }
 
@@ -146,6 +196,7 @@ namespace MRMotifs.SharedActivities.Avatars
                     continue;
                 }
 
+                Debug.Log($"[AvatarSpawnerHandlerMotif] Releasing spawn location {i} for player {player}");
                 spawnManagerMotif.ReleaseLocationRpc(i, player);
 
                 var avatarHandler = FindAnyObjectByType<AvatarMovementHandlerMotif>();

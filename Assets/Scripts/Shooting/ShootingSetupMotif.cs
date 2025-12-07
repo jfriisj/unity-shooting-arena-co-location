@@ -7,7 +7,7 @@ using Meta.XR.MultiplayerBlocks.Shared;
 using Meta.XR.MultiplayerBlocks.Fusion;
 using Meta.XR.Samples;
 using MRMotifs.SharedActivities.Spawning;
-using MRMotifs.SharedActivities.Startup;
+using MRMotifs.ColocatedExperiences.Colocation;
 
 namespace MRMotifs.SharedActivities.ShootingSample
 {
@@ -15,7 +15,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
     /// Scene-based setup for the shooting game. Attaches shooting components to players
     /// when their avatars spawn. Place this in the scene alongside the Avatar Spawner Handler.
     /// 
-    /// Setup is gated on GameStartupManagerMotif completing its flow to prevent race conditions.
+    /// Setup is gated on ColocationStartup completing its flow to prevent race conditions.
     /// </summary>
     [MetaCodeSample("MRMotifs-SharedActivities")]
     public class ShootingSetupMotif : MonoBehaviour
@@ -48,7 +48,11 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private SpawnManagerMotif m_spawnManager;
         private ShootingGameManagerMotif m_gameManager;
         private OVRCameraRig m_cameraRig;
-        private GameStartupManagerMotif m_startupManager;
+        private ColocationStartup m_colocationStartup;
+
+        [Tooltip("Timeout in seconds to wait for colocation startup to complete.")]
+        [SerializeField]
+        private float m_startupTimeout = 60f;
 
         private void Awake()
         {
@@ -60,7 +64,17 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private void Start()
         {
             Debug.Log($"[ShootingSetupMotif] Start - bulletPrefab: {(m_bulletPrefab != null ? m_bulletPrefab.name : "NULL")}, weaponPrefab: {(m_weaponPrefab != null ? m_weaponPrefab.name : "NULL")}");
-            m_startupManager = FindAnyObjectByType<GameStartupManagerMotif>();
+            m_colocationStartup = FindAnyObjectByType<ColocationStartup>();
+            
+            if (m_colocationStartup == null)
+            {
+                Debug.LogError("[ShootingSetupMotif] ColocationStartup NOT FOUND. " +
+                    "Shooting setup will not be gated on colocation. Check scene setup.");
+            }
+            else
+            {
+                Debug.Log($"[ShootingSetupMotif] Found ColocationStartup. IsReady: {m_colocationStartup.IsReady}");
+            }
         }
 
         private void OnDestroy()
@@ -87,36 +101,45 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
         private System.Collections.IEnumerator SetupShootingForAvatar(AvatarEntity avatarEntity)
         {
-            // Wait for startup manager to complete its flow (room scan, colocation, etc.)
-            if (m_startupManager == null)
+            // Wait for colocation startup to complete
+            if (m_colocationStartup == null)
             {
-                m_startupManager = FindAnyObjectByType<GameStartupManagerMotif>();
+                m_colocationStartup = FindAnyObjectByType<ColocationStartup>();
             }
 
-            if (m_startupManager != null)
+            if (m_colocationStartup != null)
             {
-                Debug.Log("[ShootingSetupMotif] Waiting for startup flow to complete...");
-                float startupTimeout = 60f;
-                float startupElapsed = 0f;
-                while (!m_startupManager.IsStartupComplete && startupElapsed < startupTimeout)
+                Debug.Log($"[ShootingSetupMotif] Waiting for ColocationStartup. " +
+                    $"Current state: {m_colocationStartup.State}, IsReady: {m_colocationStartup.IsReady}");
+                
+                float elapsed = 0f;
+                while (!m_colocationStartup.IsReady && elapsed < m_startupTimeout)
                 {
-                    if (m_startupManager.CurrentState == StartupState.Error)
-                    {
-                        Debug.LogWarning("[ShootingSetupMotif] Startup flow failed, aborting shooting setup");
-                        yield break;
-                    }
                     yield return new WaitForSeconds(0.5f);
-                    startupElapsed += 0.5f;
+                    elapsed += 0.5f;
+                    
+                    if (elapsed % 5f < 0.5f) // Log every 5 seconds
+                    {
+                        Debug.Log($"[ShootingSetupMotif] Still waiting... " +
+                            $"State: {m_colocationStartup.State}, Elapsed: {elapsed:F1}s/{m_startupTimeout}s");
+                    }
                 }
 
-                if (!m_startupManager.IsStartupComplete)
+                if (!m_colocationStartup.IsReady)
                 {
-                    Debug.LogWarning("[ShootingSetupMotif] Startup flow timed out, proceeding anyway");
+                    Debug.LogError($"[ShootingSetupMotif] ColocationStartup TIMEOUT after {m_startupTimeout}s. " +
+                        $"Final state: {m_colocationStartup.State}. Shooting setup may fail.");
                 }
                 else
                 {
-                    Debug.Log("[ShootingSetupMotif] Startup flow complete, proceeding with shooting setup");
+                    Debug.Log($"[ShootingSetupMotif] ColocationStartup ready! " +
+                        $"IsHost: {m_colocationStartup.IsHost}, proceeding with shooting setup");
                 }
+            }
+            else
+            {
+                Debug.LogError("[ShootingSetupMotif] ColocationStartup NOT FOUND. " +
+                    "Cannot gate shooting setup on colocation. Check scene setup.");
             }
 
             // Wait for avatar to be fully ready
@@ -135,12 +158,12 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 m_spawnManager = FindAnyObjectByType<SpawnManagerMotif>();
             }
             
-            float timeout = 10f;
-            float elapsed = 0f;
-            while (m_spawnManager == null && elapsed < timeout)
+            float spawnManagerTimeout = 10f;
+            float spawnManagerElapsed = 0f;
+            while (m_spawnManager == null && spawnManagerElapsed < spawnManagerTimeout)
             {
                 yield return new WaitForSeconds(0.5f);
-                elapsed += 0.5f;
+                spawnManagerElapsed += 0.5f;
                 m_spawnManager = FindAnyObjectByType<SpawnManagerMotif>();
             }
 
@@ -154,6 +177,28 @@ namespace MRMotifs.SharedActivities.ShootingSample
             bool isLocalPlayer = avatarEntity.IsLocal;
             
             Debug.Log($"[ShootingSetupMotif] Setting up avatar - IsLocal: {isLocalPlayer}");
+
+            // Add collider to avatar for bullet hit detection (Meta Avatars don't have colliders by default)
+            var avatarCollider = avatarEntity.gameObject.GetComponent<CapsuleCollider>();
+            if (avatarCollider == null)
+            {
+                avatarCollider = avatarEntity.gameObject.AddComponent<CapsuleCollider>();
+                avatarCollider.center = new Vector3(0f, 0.85f, 0f); // Center at chest height
+                avatarCollider.radius = 0.3f;  // Reasonable body width
+                avatarCollider.height = 1.7f;  // Average avatar height
+                avatarCollider.direction = 1;  // Y-axis aligned (vertical capsule)
+                Debug.Log($"[ShootingSetupMotif] Added CapsuleCollider to avatar: {avatarEntity.name}");
+            }
+
+            // Add Rigidbody for collision detection (kinematic so physics doesn't move the avatar)
+            var avatarRigidbody = avatarEntity.gameObject.GetComponent<Rigidbody>();
+            if (avatarRigidbody == null)
+            {
+                avatarRigidbody = avatarEntity.gameObject.AddComponent<Rigidbody>();
+                avatarRigidbody.isKinematic = true;  // Avatar controlled by tracking, not physics
+                avatarRigidbody.useGravity = false;
+                Debug.Log($"[ShootingSetupMotif] Added kinematic Rigidbody to avatar: {avatarEntity.name}");
+            }
 
             // Add PlayerHealthMotif to ALL players (needed for player counting and health sync)
             var playerHealth = avatarEntity.gameObject.GetComponent<PlayerHealthMotif>();

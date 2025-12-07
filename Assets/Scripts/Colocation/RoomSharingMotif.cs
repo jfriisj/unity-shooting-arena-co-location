@@ -402,7 +402,7 @@ namespace MRMotifs.ColocatedExperiences.Colocation
 
         private void EnableGlobalMeshColliders()
         {
-            Debug.Log("[RoomSharing] Enabling GlobalMesh colliders...");
+            Debug.Log("[RoomSharing] Enabling GlobalMesh colliders and renderers...");
 
             m_mruk = MRUK.Instance;
             var room = m_mruk?.GetCurrentRoom();
@@ -413,8 +413,9 @@ namespace MRMotifs.ColocatedExperiences.Colocation
             }
 
             int collidersEnabled = 0;
+            int renderersEnabled = 0;
 
-            // Setup GlobalMesh collider if available
+            // Setup GlobalMesh collider and renderer if available
             var globalMeshAnchor = room.GlobalMeshAnchor;
             if (globalMeshAnchor != null)
             {
@@ -423,6 +424,7 @@ namespace MRMotifs.ColocatedExperiences.Colocation
                 {
                     if (meshFilter != null && meshFilter.sharedMesh != null)
                     {
+                        // Enable collider
                         var meshCollider = meshFilter.gameObject.GetComponent<MeshCollider>();
                         if (meshCollider == null)
                         {
@@ -431,29 +433,49 @@ namespace MRMotifs.ColocatedExperiences.Colocation
                         meshCollider.sharedMesh = meshFilter.sharedMesh;
                         meshCollider.enabled = true;
                         collidersEnabled++;
+
+                        // Enable renderer for visibility
+                        var meshRenderer = meshFilter.gameObject.GetComponent<MeshRenderer>();
+                        if (meshRenderer != null)
+                        {
+                            meshRenderer.enabled = true;
+                            renderersEnabled++;
+                        }
                     }
                 }
-                Debug.Log($"[RoomSharing] GlobalMesh colliders enabled: {collidersEnabled}");
+                
+                // Activate the entire GlobalMesh hierarchy
+                globalMeshAnchor.gameObject.SetActive(true);
+                Debug.Log($"[RoomSharing] GlobalMesh colliders: {collidersEnabled}, renderers: {renderersEnabled}");
             }
             else
             {
                 Debug.Log("[RoomSharing] No GlobalMeshAnchor found. Using individual anchor colliders.");
             }
 
-            // Enable colliders on all room anchors (walls, floor, ceiling, furniture, etc.)
+            // Enable colliders and renderers on all room anchors (walls, floor, ceiling, furniture, etc.)
             foreach (var anchor in room.Anchors)
             {
                 if (anchor == null) continue;
 
+                // Enable colliders
                 var colliders = anchor.GetComponentsInChildren<Collider>(true);
                 foreach (var collider in colliders)
                 {
                     collider.enabled = true;
                     collidersEnabled++;
                 }
+
+                // Enable renderers for visibility
+                var renderers = anchor.GetComponentsInChildren<MeshRenderer>(true);
+                foreach (var renderer in renderers)
+                {
+                    renderer.enabled = true;
+                    renderersEnabled++;
+                }
             }
 
-            Debug.Log($"[RoomSharing] Room colliders setup complete. Total colliders enabled: {collidersEnabled}");
+            Debug.Log($"[RoomSharing] Room setup complete. Total colliders: {collidersEnabled}, renderers: {renderersEnabled}");
         }
 
         #endregion

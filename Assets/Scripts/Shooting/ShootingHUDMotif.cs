@@ -11,7 +11,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
 {
     /// <summary>
     /// Displays player HUD showing health, ammo, and score.
-    /// Attaches to the camera rig and follows the player's view.
+    /// Attaches to the player's right wrist for easy viewing.
     /// </summary>
     [MetaCodeSample("MRMotifs-SharedActivities")]
     public class ShootingHUDMotif : MonoBehaviour
@@ -51,17 +51,34 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [Tooltip("Duration to show damage indicator.")]
         [SerializeField] private float m_damageIndicatorDuration = 0.5f;
 
-        [Tooltip("Distance from camera for HUD.")]
-        [SerializeField] private float m_hudDistance = 2f;
+        [Header("Wrist UI Settings")]
+        [Tooltip("Attach HUD to wrist instead of world space.")]
+        [SerializeField] private bool m_attachToWrist = true;
+
+        [Tooltip("Local position offset from wrist.")]
+        [SerializeField] private Vector3 m_wristPositionOffset = new Vector3(0f, 0.05f, 0.05f);
+
+        [Tooltip("Local rotation offset (Euler angles).")]
+        [SerializeField] private Vector3 m_wristRotationOffset = new Vector3(45f, 0f, 0f);
+
+        [Tooltip("Scale when attached to wrist.")]
+        [SerializeField] private float m_wristScale = 0.0005f;
 
         private PlayerHealthMotif m_playerHealth;
         private float m_hitMarkerTimer;
         private float m_damageTimer;
         private float m_respawnTimer;
         private bool m_isRespawning;
+        private Transform m_rightHandAnchor;
 
         private IEnumerator Start()
         {
+            // Attach to wrist if enabled
+            if (m_attachToWrist)
+            {
+                AttachToWrist();
+            }
+
             // Wait for local player's health component to be spawned
             while (m_playerHealth == null)
             {
@@ -216,6 +233,35 @@ namespace MRMotifs.SharedActivities.ShootingSample
             }
 
             m_isRespawning = false;
+        }
+
+        /// <summary>
+        /// Attaches the HUD canvas to the player's right wrist.
+        /// </summary>
+        private void AttachToWrist()
+        {
+            // Find the OVRCameraRig and get the right hand anchor
+            var cameraRig = FindAnyObjectByType<OVRCameraRig>();
+            if (cameraRig == null)
+            {
+                Debug.LogWarning("[ShootingHUDMotif] Could not find OVRCameraRig. HUD will remain in world space.");
+                return;
+            }
+
+            m_rightHandAnchor = cameraRig.rightHandAnchor;
+            if (m_rightHandAnchor == null)
+            {
+                Debug.LogWarning("[ShootingHUDMotif] Could not find right hand anchor. HUD will remain in world space.");
+                return;
+            }
+
+            // Attach this canvas to the wrist
+            transform.SetParent(m_rightHandAnchor, false);
+            transform.localPosition = m_wristPositionOffset;
+            transform.localRotation = Quaternion.Euler(m_wristRotationOffset);
+            transform.localScale = Vector3.one * m_wristScale;
+
+            Debug.Log("[ShootingHUDMotif] HUD attached to right wrist");
         }
 
         /// <summary>

@@ -226,6 +226,76 @@ $ADB -s <serial> pull /sdcard/Android/data/com.jJFiisJ.ArenaShooting/files/metri
 
 ---
 
+## 🏗️ DEFINITIVE: Co-located MR Architecture
+
+This project uses Meta's co-location APIs combined with Photon Fusion 2. Understanding the correct building blocks is essential.
+
+### Building Block Options (Choose ONE Approach)
+
+Meta provides TWO independent approaches for co-located multiplayer. **DO NOT MIX THEM:**
+
+#### Option A: Colocation Session + Space Sharing (THIS PROJECT)
+Uses Meta's native Bluetooth/WiFi discovery - NO lobby/matchmaking needed.
+
+| Step | Component | API | Responsibility |
+|------|-----------|-----|----------------|
+| 1 | **Platform Init** | `OVRPlatform.Initialize()` | Initialize Meta Platform SDK |
+| 2 | **Room Scan (Host only)** | `MRUK.LoadSceneFromDevice()` | Load room mesh from device |
+| 3 | **Advertise Session (Host)** | `OVRColocationSession.StartAdvertisementAsync(metadata)` | Bluetooth broadcast, returns `groupUuid` |
+| 4 | **Start Photon Session** | `NetworkRunner.StartGame()` | Start networking AFTER colocation discovered |
+| 5 | **Share Room (Host)** | `room.ShareRoomAsync(groupUuid)` | Share MRUK room via Space Sharing API |
+| 6 | **Discover Session (Client)** | `OVRColocationSession.StartDiscoveryAsync()` | Listen for nearby hosts |
+| 7 | **Load Shared Room (Client)** | `MRUK.LoadSceneFromSharedRooms(null, groupUuid, alignmentData)` | Load host's room mesh with alignment |
+
+**Key Flow:**
+```
+Host: Platform Init → MRUK Scan → Advertise (get groupUuid) → Share Room → Start Photon
+Client: Platform Init → Discover → Get groupUuid → Join Photon → Load Shared Room → Align
+```
+
+#### Option B: Photon Lobby + Shared Spatial Anchor (Alternative)
+Uses Photon for matchmaking, single anchor for alignment.
+
+| Step | Component | API | Responsibility |
+|------|-----------|-----|----------------|
+| 1 | **Platform Init** | `OVRPlatform.Initialize()` | Initialize Meta Platform SDK |
+| 2 | **Start Photon with Lobby** | `StartGameArgs { CustomLobbyName = "X" }` | Publish session to lobby |
+| 3 | **Create Anchor (Host)** | `OVRSpatialAnchor`, `anchor.SaveAnchorAsync()` | Create and save spatial anchor |
+| 4 | **Share Anchor (Host)** | `anchor.ShareAsync(groupUuid)` | Share to group via Meta Cloud |
+| 5 | **Load Anchor (Client)** | `OVRSpatialAnchor.LoadUnboundAnchorsAsync()` | Load shared anchor |
+| 6 | **Align Camera Rig** | Transform math on OVRCameraRig | Align client to anchor position |
+
+### ⚠️ CRITICAL: What NOT to Do
+
+1. **DON'T use Colocation Discovery for matchmaking AND Photon Lobby together** - Pick ONE matchmaking method
+2. **DON'T call `MRUK.LoadSceneFromDevice()` on Client** - Client loads from Space Sharing, not device
+3. **DON'T skip the groupUuid** - This is what links Host and Client for anchor/room sharing
+4. **DON'T expect room mesh without Space Sharing** - Without it, only Host has room collision
+
+### Networked Variables Required for Space Sharing
+
+```csharp
+// Host sets these, Client reads them
+[Networked] public NetworkString<_512> NetworkedRoomUuid { get; set; }
+[Networked] public NetworkString<_256> NetworkedFloorPose { get; set; }
+```
+
+### Physics Collision Setup
+
+For room mesh collision to work on ALL devices:
+1. **Host:** MRUK spawns `EffectMesh` with `MeshCollider` from device scan
+2. **Client:** `LoadSceneFromSharedRooms()` spawns same mesh with colliders from shared data
+3. **Both devices:** Now have identical physics geometry
+
+### Meta Documentation Links
+
+- **[Multiplayer Building Blocks](https://developers.meta.com/horizon/documentation/unity/bb-multiplayer-blocks)** - Official guide for Auto/Custom/Local Matchmaking + Colocation blocks
+- **[Colocation Discovery](https://developers.meta.com/horizon/documentation/unity/unity-colocation-discovery)** - `OVRColocationSession` API
+- **[Space Sharing (MRUK)](https://developers.meta.com/horizon/documentation/unity/unity-mr-utility-kit-space-sharing)** - Room mesh sharing
+- **[Shared Spatial Anchors](https://developers.meta.com/horizon/documentation/unity/unity-shared-spatial-anchors)** - Group-based anchor sharing
+
+---
+
 ## 🔄 Guided Startup Flow (Host vs Client)
 
 The game implements a **Guided Startup Modal System** that ensures proper initialization order and prevents race conditions between networking, colocation, and avatar spawning.
@@ -415,6 +485,118 @@ When a step fails:
 
 ---
 
+## 🔌 Networking Architecture (Simplified FusionBootstrap Approach)
+
+**Updated December 2024** - The networking layer uses a simplified approach based on Meta's official MRMotifs samples.
+
+### Key Pattern: FusionBootstrap + FusionBBEvents
+
+Instead of manually creating NetworkRunner and calling `StartGame()`, we use:
+
+1. **FusionBootstrap** (Building Block) - Handles session creation/joining
+2. **FusionBBEvents** (Static Callbacks) - Provides connection state notifications
+3. **SessionDiscoveryManager** (Wrapper) - Simplified API for game code
+
+### Session Flow
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    SIMPLIFIED SESSION CREATION                   │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  Host:                                                           │
+│    SessionDiscoveryManager.StartAsHost()                        │
+│      └─ FusionBootstrap.DefaultRoomName = "ShootingGame_XXXX"  │
+│      └─ FusionBootstrap.StartSharedClient()                     │
+│      └─ FusionBBEvents.OnConnectedToServer fires               │
+│      └─ IsConnected = true                                       │
+│                                                                  │
+│  Client:                                                         │
+│    SessionDiscoveryManager.JoinSession("ShootingGame_XXXX")     │
+│      └─ FusionBootstrap.DefaultRoomName = sessionName           │
+│      └─ FusionBootstrap.StartSharedClient()                     │
+│      └─ FusionBBEvents.OnConnectedToServer fires               │
+│      └─ IsConnected = true                                       │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### SessionDiscoveryManager Public API
+
+```csharp
+// Start as Host (generates unique session name)
+public void StartAsHost(string customSessionName = null);
+
+// Join existing session by name
+public void JoinSession(string sessionName);
+
+// Disconnect from current session
+public async void Disconnect();
+
+// Properties (polled by GameStartupManagerMotif)
+public bool IsConnecting { get; }      // True while connecting
+public bool IsConnected { get; }       // True when connected
+public bool IsHost { get; }            // True if session host
+public string CurrentSessionName { get; }
+public NetworkRunner Runner { get; }
+
+// Events
+public event Action<NetworkRunner> OnConnected;
+public event Action<string> OnConnectionFailed;
+public event Action OnDisconnected;
+```
+
+### FusionBBEvents Subscriptions
+
+The SessionDiscoveryManager subscribes to these FusionBBEvents:
+
+| Event | Handler | Updates |
+|-------|---------|---------|
+| `OnConnectedToServer` | `HandleConnectedToServer` | Sets IsConnected=true, stores Runner |
+| `OnDisconnectedFromServer` | `HandleDisconnectedFromServer` | Resets state |
+| `OnConnectFailed` | `HandleConnectFailed` | Fires OnConnectionFailed event |
+| `OnPlayerJoined` | `HandlePlayerJoined` | Logs player join |
+| `OnPlayerLeft` | `HandlePlayerLeft` | Logs player leave |
+| `OnShutdown` | `HandleShutdown` | Resets state |
+
+### GameStartupManagerMotif Polling
+
+Instead of awaiting async Tasks, the startup manager polls the SessionDiscoveryManager:
+
+```csharp
+// Wait for connection with timeout
+while (m_sessionDiscovery.IsConnecting && taskElapsed < taskTimeout)
+{
+    yield return new WaitForSeconds(0.5f);
+    taskElapsed += 0.5f;
+    m_statusMessage = $"Creating game session... ({taskElapsed:F0}s)";
+    UpdateUI();
+}
+
+if (m_sessionDiscovery.IsConnected)
+{
+    m_networkRunner = m_sessionDiscovery.Runner;
+    // Continue to next step...
+}
+```
+
+### Why This Approach?
+
+| Aspect | Old Approach | New Approach |
+|--------|--------------|--------------|
+| Session Creation | Manual `NetworkRunner.StartGame()` | `FusionBootstrap.StartSharedClient()` |
+| Connection Status | Awaiting async Task | Polling `IsConnecting`/`IsConnected` |
+| Callbacks | `INetworkRunnerCallbacks` interface | `FusionBBEvents` static events |
+| Error Handling | Task exception handling | Event-based (`OnConnectFailed`) |
+| Complexity | ~360 lines | ~150 lines |
+| Reliability | Timeout issues on device | Matches Meta's tested patterns |
+
+### Session Discovery Note
+
+The simplified approach uses **manual session name entry** instead of automatic lobby refresh. Clients must know the session name from the host (shared verbally or via text).
+
+---
+
 ## 📁 Project Structure
 
 ```
@@ -442,6 +624,8 @@ Assets/
 │   │   └── SpawnManagerMotif.cs             # Open play area spawning
 │   ├── Startup/                # Guided startup flow system
 │   │   ├── GameStartupManagerMotif.cs       # Orchestrates Host/Client initialization
+│   │   ├── RoleSelectionModalUI.cs          # Host/Client role selection UI
+│   │   ├── SessionDiscoveryManager.cs       # Simplified FusionBootstrap wrapper
 │   │   ├── StartupModalUI.cs                # Modal UI (status, progress, errors)
 │   │   ├── StartupFlowConfig.cs             # ScriptableObject for timeout config
 │   │   └── Editor/
@@ -899,6 +1083,9 @@ These are custom game components. Each should have ONE clear responsibility.
 |----------------|-----------------|----------|
 | **Networking** | | |
 | Session management | `NetworkRunner` | [BuildingBlock] Network Manager |
+| Session creation (FusionBootstrap) | `FusionBootstrap` | [BuildingBlock] Auto Matchmaking |
+| Session state wrapper | `SessionDiscoveryManager` | [MR Motif] Game Startup Manager |
+| Connection callbacks | `FusionBBEvents` | Static events (subscribed by SessionDiscoveryManager) |
 | Host migration | `HostMigrationHandlerMotif` | [BuildingBlock] Network Manager *(disabled)* |
 | **Colocation** | | |
 | Colocation orchestration | `ColocationController` | [BuildingBlock] Colocation |
@@ -951,6 +1138,8 @@ These are custom game components. Each should have ONE clear responsibility.
 | Adding game logic to `[BuildingBlock] Colocation` | Use `[MR Motif]` GameObjects for custom game logic |
 | Having multiple `NetworkRunner` instances | Only ONE `NetworkRunner` in `[BuildingBlock] Network Manager` |
 | Putting health/shooting on building blocks | Attach to avatar prefab at runtime via `ShootingSetupMotif` |
+| Using manual `NetworkRunner.StartGame()` | Use `FusionBootstrap.StartSharedClient()` with `FusionBBEvents` callbacks |
+| Awaiting async Tasks for connection | Poll `IsConnecting`/`IsConnected` via coroutines |
 
 ---
 
@@ -1003,8 +1192,10 @@ These are custom game components. Each should have ONE clear responsibility.
 | Feature | Script | Status |
 |---------|--------|--------|
 | Photon Fusion 2 Shared Mode | Building Block | ✅ |
-| Auto matchmaking (same session) | Building Block | ✅ |
-| Host migration support | `HostMigrationHandlerMotif.cs` | ✅ |
+| FusionBootstrap session creation | `FusionBootstrap` (Building Block) | ✅ |
+| FusionBBEvents callbacks | `SessionDiscoveryManager.cs` | ✅ |
+| Simplified session API | `SessionDiscoveryManager.cs` | ✅ |
+| Host migration support | `HostMigrationHandlerMotif.cs` | ✅ (disabled) |
 | Anchor creation (3 modes) | `SharedSpatialAnchorManager.cs` | ✅ |
 | Anchor advertisement/discovery | `SharedSpatialAnchorManager.cs` | ✅ |
 | Camera rig alignment to anchor | `ColocationManager.cs` | ✅ |
