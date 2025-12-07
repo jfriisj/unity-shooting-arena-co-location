@@ -91,6 +91,9 @@ namespace MRMotifs.SharedActivities.ShootingSample
             
             Debug.Log($"[ShootingSetupMotif] Setting up avatar - IsLocal: {isLocalPlayer}");
 
+            // Add collider to avatar for bullet collision detection
+            SetupAvatarCollider(avatarEntity.gameObject);
+
             // Add PlayerHealthMotif to ALL players (needed for player counting and health sync)
             var playerHealth = avatarEntity.gameObject.GetComponent<PlayerHealthMotif>();
             if (playerHealth == null)
@@ -126,6 +129,13 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 shootingPlayer = avatarEntity.gameObject.AddComponent<ShootingPlayerMotif>();
             }
 
+            // Add wrist health display for local player
+            var wristHealth = avatarEntity.gameObject.GetComponent<WristHealthDisplayMotif>();
+            if (wristHealth == null)
+            {
+                avatarEntity.gameObject.AddComponent<WristHealthDisplayMotif>();
+            }
+
             // Configure bullet prefab
             if (m_bulletPrefab != null)
             {
@@ -140,6 +150,46 @@ namespace MRMotifs.SharedActivities.ShootingSample
             }
 
             Debug.Log("[ShootingSetupMotif] Local player shooting setup complete");
+        }
+
+        /// <summary>
+        /// Sets up a collider on the avatar so bullets can collide with it.
+        /// Uses a CapsuleCollider sized for a typical human avatar.
+        /// The collider is set as a TRIGGER to prevent physics bouncing.
+        /// </summary>
+        private void SetupAvatarCollider(GameObject avatarObj)
+        {
+            Debug.Log($"[ShootingSetupMotif] SetupAvatarCollider called for: {avatarObj.name}");
+            
+            // Check if collider already exists
+            var existingCollider = avatarObj.GetComponent<Collider>();
+            if (existingCollider != null)
+            {
+                // Ensure existing collider is a trigger
+                existingCollider.isTrigger = true;
+                Debug.Log($"[ShootingSetupMotif] Avatar already has a collider ({existingCollider.GetType().Name}), set to trigger");
+                return;
+            }
+
+            // Add a CapsuleCollider sized for a human avatar
+            var capsule = avatarObj.AddComponent<CapsuleCollider>();
+            capsule.center = new Vector3(0f, 0.9f, 0f); // Center at chest height
+            capsule.radius = 0.3f; // Approximate torso width
+            capsule.height = 1.8f; // Approximate human height
+            capsule.direction = 1; // Y-axis (vertical)
+            capsule.isTrigger = true; // Use trigger to prevent physics bouncing
+
+            // Rigidbody is still needed for trigger detection with moving objects
+            var rb = avatarObj.GetComponent<Rigidbody>();
+            if (rb == null)
+            {
+                rb = avatarObj.AddComponent<Rigidbody>();
+            }
+            rb.isKinematic = true; // Don't let physics move the avatar
+            rb.useGravity = false;
+
+            Debug.Log($"[ShootingSetupMotif] Added CapsuleCollider to avatar - center: {capsule.center}, radius: {capsule.radius}, height: {capsule.height}, isTrigger: {capsule.isTrigger}");
+            Debug.Log($"[ShootingSetupMotif] Avatar layer: {avatarObj.layer} ({LayerMask.LayerToName(avatarObj.layer)})");
         }
     }
 }

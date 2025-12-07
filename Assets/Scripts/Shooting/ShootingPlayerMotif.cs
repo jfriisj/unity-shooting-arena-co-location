@@ -54,6 +54,13 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [Tooltip("Scale of the weapon model.")]
         [SerializeField] private float m_weaponScale = 0.8f;
 
+        [Header("Muzzle Flash")]
+        [Tooltip("Muzzle flash prefab to spawn when firing.")]
+        [SerializeField] private GameObject m_muzzleFlashPrefab;
+
+        [Tooltip("Duration to display muzzle flash.")]
+        [SerializeField] private float m_muzzleFlashDuration = 0.05f;
+
         [Header("References")]
         [Tooltip("Transform used as the firing point (controller or hand).")]
         [SerializeField] private Transform m_leftFirePoint;
@@ -100,6 +107,18 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 m_spawnedAudioSource = gameObject.AddComponent<AudioSource>();
                 m_spawnedAudioSource.spatialBlend = 1f;
                 m_audioSource = m_spawnedAudioSource;
+            }
+
+            // Load fire sound from Resources if not assigned
+            if (m_fireSound == null)
+            {
+                m_fireSound = Resources.Load<AudioClip>("Audio/Fire");
+            }
+
+            // Load muzzle flash prefab from Resources if not assigned
+            if (m_muzzleFlashPrefab == null)
+            {
+                m_muzzleFlashPrefab = Resources.Load<GameObject>("MuzzleFlash");
             }
 
             // Set up fire points from camera rig if not assigned
@@ -386,6 +405,24 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
             // Play fire sound
             PlayFireSound();
+
+            // Spawn muzzle flash effect
+            SpawnMuzzleFlash(firePoint);
+        }
+
+        /// <summary>
+        /// Spawns a muzzle flash effect at the given fire point.
+        /// </summary>
+        private void SpawnMuzzleFlash(Transform firePoint)
+        {
+            if (m_muzzleFlashPrefab == null || firePoint == null)
+            {
+                return;
+            }
+
+            var muzzleFlash = Instantiate(m_muzzleFlashPrefab, firePoint.position, firePoint.rotation);
+            muzzleFlash.transform.SetParent(firePoint, true);
+            Destroy(muzzleFlash, m_muzzleFlashDuration);
         }
 
         /// <summary>

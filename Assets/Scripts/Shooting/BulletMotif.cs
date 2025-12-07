@@ -23,8 +23,11 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [Tooltip("Damage dealt on hit.")]
         [SerializeField] private int m_damage = 10;
 
-        [Tooltip("Visual effect prefab spawned on impact.")]
+        [Tooltip("Visual effect prefab spawned on environment impact (bullet hole).")]
         [SerializeField] private GameObject m_hitEffectPrefab;
+
+        [Tooltip("Visual effect prefab spawned on player/avatar impact (blood effect).")]
+        [SerializeField] private GameObject m_playerHitEffectPrefab;
 
         [Tooltip("Trail renderer for bullet trail effect.")]
         [SerializeField] private TrailRenderer m_trailRenderer;
@@ -51,6 +54,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private Rigidbody m_rigidbody;
         private float m_lifetime;
         private float m_spawnTime;
+        private Vector3 m_previousPosition;
 
         private void Awake()
         {
@@ -66,6 +70,18 @@ namespace MRMotifs.SharedActivities.ShootingSample
             {
                 m_hitSound = Resources.Load<AudioClip>("Audio/Hit");
             }
+
+            // Load bullet hole prefab from Resources if not assigned
+            if (m_hitEffectPrefab == null)
+            {
+                m_hitEffectPrefab = Resources.Load<GameObject>("BulletHole");
+            }
+
+            // Load player hit effect (blood) from Resources if not assigned
+            if (m_playerHitEffectPrefab == null)
+            {
+                m_playerHitEffectPrefab = Resources.Load<GameObject>("BloodEffect");
+            }
         }
 
         public override void Spawned()
@@ -73,6 +89,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
             base.Spawned();
             m_spawnTime = Time.time;
             HasHit = false;
+            m_previousPosition = transform.position;
 
             // Apply velocity if we're the authority
             if (Object.HasStateAuthority && NetworkedVelocity != Vector3.zero)
@@ -90,6 +107,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
             OwnerPlayer = owner;
             NetworkedVelocity = velocity;
             m_lifetime = lifetime;
+            m_previousPosition = transform.position;
 
             if (m_rigidbody != null)
             {
@@ -111,6 +129,83 @@ namespace MRMotifs.SharedActivities.ShootingSample
             if (Time.time - m_spawnTime > m_lifetime)
             {
                 DespawnBullet();
+                return;
+            }
+
+            // Raycast-based collision detection to catch fast-moving bullet hits
+            if (!HasHit)
+            {
+                CheckRaycastCollision();
+            }
+
+            // Update previous position for next frame's raycast
+            m_previousPosition = transform.position;
+        }
+
+        /// <summary>
+        /// Uses raycast to detect collisions between previous and current position.
+        /// This catches collisions that physics triggers might miss due to high bullet speed.
+        /// </summary>
+        private void CheckRaycastCollision()
+        {
+            Vector3 currentPosition = transform.position;
+            Vector3 direction = currentPosition - m_previousPosition;
+            float distance = direction.magnitude;
+
+            if (distance < 0.001f)
+            {
+                return; // Not enough movement to check
+            }
+
+            // Use RaycastAll to see everything the ray hits for debugging
+            RaycastHit[] hits = Physics.RaycastAll(m_previousPosition, direction.normalized, distance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide);
+            
+            if (hits.Length > 0)
+            {
+                Debug.Log($"[BulletMotif] Raycast hit {hits.Length} objects:");
+                foreach (var h in hits)
+                {
+                    Debug.Log($"  - {h.collider.gameObject.name} (layer: {h.collider.gameObject.layer}, isTrigger: {h.collider.isTrigger})");
+                }
+            }
+
+            // Cast a ray from previous position to current position
+            // Use QueryTriggerInteraction.Collide to hit trigger colliders (avatar colliders are triggers)
+            if (Physics.Raycast(m_previousPosition, direction.normalized, out RaycastHit hit, distance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide))
+            {
+                // Check if we hit a player
+                var playerHealth = hit.collider.GetComponentInParent<PlayerHealthMotif>();
+                var networkObject = hit.collider.GetComponentInParent<NetworkObject>();
+                
+                bool isOwnAvatar = false;
+                if (networkObject != null && networkObject.InputAuthority == OwnerPlayer)
+                {
+                    isOwnAvatar = true;
+                }
+                
+                if (playerHealth != null && (playerHealth.OwnerPlayer == OwnerPlayer || isOwnAvatar))
+                {
+                    // Hit own avatar, ignore
+                    return;
+                }
+
+                // Process the hit
+                HasHit = true;
+                bool hitPlayer = playerHealth != null;
+                
+                if (hitPlayer)
+                {
+                    Debug.Log($"[BulletMotif] Raycast hit player! Dealing {m_damage} damage");
+                    // Apply damage directly (local) since PlayerHealthMotif may not have working RPCs
+                    playerHealth.ApplyDamageLocal(m_damage, OwnerPlayer);
+                }
+                else
+                {
+                    Debug.Log($"[BulletMotif] Raycast hit environment: {hit.collider.gameObject.name}");
+                }
+
+                SpawnHitEffectRpc(hit.point, hit.normal, hitPlayer);
+                DespawnBullet();
             }
         }
 
@@ -125,52 +220,96 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
             // Check if we hit a player
             var playerHealth = collision.gameObject.GetComponentInParent<PlayerHealthMotif>();
+            bool hitPlayer = false;
             if (playerHealth != null)
             {
                 // Don't damage ourselves
                 if (playerHealth.OwnerPlayer != OwnerPlayer)
                 {
-                    // Send damage RPC
-                    playerHealth.TakeDamageRpc(m_damage, OwnerPlayer);
+                    // Apply damage directly (local) since PlayerHealthMotif may not have working RPCs
+                    playerHealth.ApplyDamageLocal(m_damage, OwnerPlayer);
+                    hitPlayer = true;
                 }
             }
 
             // Spawn hit effect and despawn
-            SpawnHitEffectRpc(collision.contacts[0].point, collision.contacts[0].normal);
+            SpawnHitEffectRpc(collision.contacts[0].point, collision.contacts[0].normal, hitPlayer);
             DespawnBullet();
         }
 
         private void OnTriggerEnter(Collider other)
         {
+            Debug.Log($"[BulletMotif] OnTriggerEnter - other: {other.gameObject.name}, HasStateAuthority: {Object.HasStateAuthority}, HasHit: {HasHit}");
+
             if (!Object.HasStateAuthority || HasHit)
             {
                 return;
             }
 
-            HasHit = true;
-
-            // Check if we hit a player
+            // Check if we hit a player by looking for PlayerHealthMotif or NetworkObject
             var playerHealth = other.GetComponentInParent<PlayerHealthMotif>();
-            if (playerHealth != null)
+            var networkObject = other.GetComponentInParent<NetworkObject>();
+            
+            Debug.Log($"[BulletMotif] PlayerHealth found: {playerHealth != null}, NetworkObject found: {networkObject != null}");
+            
+            bool hitPlayer = false;
+            bool isOwnAvatar = false;
+
+            // Determine if this is the bullet owner's own avatar
+            if (networkObject != null)
             {
-                // Don't damage ourselves
-                if (playerHealth.OwnerPlayer != OwnerPlayer)
+                // Check if this NetworkObject belongs to the bullet owner
+                isOwnAvatar = networkObject.HasStateAuthority && Object.HasStateAuthority;
+                Debug.Log($"[BulletMotif] NetworkObject.InputAuthority: {networkObject.InputAuthority}, isOwnAvatar: {isOwnAvatar}");
+                
+                // Better check: compare input authority with bullet owner
+                if (networkObject.InputAuthority == OwnerPlayer)
                 {
-                    playerHealth.TakeDamageRpc(m_damage, OwnerPlayer);
+                    isOwnAvatar = true;
                 }
             }
+            
+            if (playerHealth != null)
+            {
+                Debug.Log($"[BulletMotif] PlayerHealth.OwnerPlayer: {playerHealth.OwnerPlayer}, Bullet.OwnerPlayer: {OwnerPlayer}");
+                
+                // Use both checks - OwnerPlayer or InputAuthority
+                if (playerHealth.OwnerPlayer == OwnerPlayer || isOwnAvatar)
+                {
+                    // Hit our own collider - ignore and continue
+                    Debug.Log($"[BulletMotif] Hit own avatar, ignoring");
+                    return;
+                }
+                
+                Debug.Log($"[BulletMotif] Dealing damage to player!");
+                // Apply damage directly (local) since PlayerHealthMotif may not have working RPCs
+                playerHealth.ApplyDamageLocal(m_damage, OwnerPlayer);
+                hitPlayer = true;
+            }
+            else if (isOwnAvatar)
+            {
+                // Hit own avatar but no PlayerHealth found - still ignore
+                Debug.Log($"[BulletMotif] Hit own avatar (no PlayerHealth), ignoring");
+                return;
+            }
+
+            HasHit = true;
 
             // Spawn hit effect and despawn
-            SpawnHitEffectRpc(transform.position, -transform.forward);
+            Debug.Log($"[BulletMotif] Spawning hit effect, hitPlayer: {hitPlayer}");
+            SpawnHitEffectRpc(transform.position, -transform.forward, hitPlayer);
             DespawnBullet();
         }
 
         [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-        private void SpawnHitEffectRpc(Vector3 position, Vector3 normal)
+        private void SpawnHitEffectRpc(Vector3 position, Vector3 normal, NetworkBool isPlayerHit)
         {
-            if (m_hitEffectPrefab != null)
+            // Use different effect for player hits vs environment hits
+            GameObject effectPrefab = isPlayerHit ? m_playerHitEffectPrefab : m_hitEffectPrefab;
+            
+            if (effectPrefab != null)
             {
-                var effect = Instantiate(m_hitEffectPrefab, position, Quaternion.LookRotation(normal));
+                var effect = Instantiate(effectPrefab, position, Quaternion.LookRotation(normal));
                 Destroy(effect, 2f);
             }
 

@@ -108,6 +108,37 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private AudioSource m_audioSource;
         private Transform m_spawnPoint;
 
+        // Local state for when Networked properties don't work (dynamic AddComponent)
+        private int m_currentHealthLocal;
+        private bool m_isDeadLocal;
+        private bool m_isInvulnerableLocal;
+        private int m_killsLocal;
+        private int m_deathsLocal;
+        private NetworkObject m_networkObject;
+
+        /// <summary>
+        /// Get current health (local fallback if networked doesn't work)
+        /// </summary>
+        public int GetCurrentHealth() => m_currentHealthLocal;
+        
+        /// <summary>
+        /// Check if player is dead (local fallback)
+        /// </summary>
+        public bool IsDeadLocal => m_isDeadLocal;
+
+        private void Awake()
+        {
+            // Initialize local health state
+            m_currentHealthLocal = m_maxHealth;
+            m_isDeadLocal = false;
+            m_isInvulnerableLocal = false;
+            m_killsLocal = 0;
+            m_deathsLocal = 0;
+
+            // Try to get NetworkObject for owner detection
+            m_networkObject = GetComponentInParent<NetworkObject>();
+        }
+
         public override void Spawned()
         {
             base.Spawned();
@@ -116,6 +147,11 @@ namespace MRMotifs.SharedActivities.ShootingSample
             if (ConfigMaxHealth > 0) m_maxHealth = ConfigMaxHealth;
             if (ConfigRespawnDelay > 0) m_respawnDelay = ConfigRespawnDelay;
             if (ConfigInvulnerabilityDuration >= 0) m_invulnerabilityDuration = ConfigInvulnerabilityDuration;
+
+            // Initialize local health state with config
+            m_currentHealthLocal = m_maxHealth;
+            m_isDeadLocal = false;
+            m_isInvulnerableLocal = false;
 
             if (Object.HasStateAuthority)
             {
@@ -126,6 +162,11 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 Kills = 0;
                 Deaths = 0;
             }
+
+            // Fire initial health event
+            OnHealthUpdated?.Invoke(m_currentHealthLocal, m_maxHealth);
+
+            Debug.Log($"[PlayerHealthMotif] Spawned - maxHealth: {m_maxHealth}, currentHealth: {m_currentHealthLocal}");
 
             // Cache original color for flash effect
             if (m_playerRenderer != null)
@@ -153,6 +194,86 @@ namespace MRMotifs.SharedActivities.ShootingSample
             {
                 m_respawnSound = Resources.Load<AudioClip>("Audio/Respawn");
             }
+        }
+
+        /// <summary>
+        /// Apply damage locally without using Fusion RPCs.
+        /// This is used when PlayerHealthMotif is added dynamically and RPCs don't work.
+        /// </summary>
+        public void ApplyDamageLocal(int damage, PlayerRef attacker)
+        {
+            Debug.Log($"[PlayerHealthMotif] ApplyDamageLocal - damage: {damage}, attacker: {attacker}, currentHealth: {m_currentHealthLocal}");
+            
+            if (m_isDeadLocal || m_isInvulnerableLocal)
+            {
+                Debug.Log($"[PlayerHealthMotif] Ignoring damage - dead: {m_isDeadLocal}, invulnerable: {m_isInvulnerableLocal}");
+                return;
+            }
+
+            m_currentHealthLocal = Mathf.Max(0, m_currentHealthLocal - damage);
+            
+            // Fire health updated event
+            OnHealthUpdated?.Invoke(m_currentHealthLocal, m_maxHealth);
+
+            // Play hit effects locally
+            PlayHitEffects();
+
+            if (m_currentHealthLocal <= 0)
+            {
+                DieLocal(attacker);
+            }
+        }
+
+        private void PlayHitEffects()
+        {
+            // Play hit sound
+            if (m_audioSource != null && m_hitSound != null)
+            {
+                m_audioSource.PlayOneShot(m_hitSound);
+            }
+
+            // Flash the player model
+            if (m_playerRenderer != null)
+            {
+                StartCoroutine(FlashColor());
+            }
+        }
+
+        private void DieLocal(PlayerRef killer)
+        {
+            Debug.Log($"[PlayerHealthMotif] DieLocal - killed by: {killer}");
+            m_isDeadLocal = true;
+            m_deathsLocal++;
+
+            // Play death sound
+            if (m_audioSource != null && m_deathSound != null)
+            {
+                m_audioSource.PlayOneShot(m_deathSound);
+            }
+
+            // Fire death event
+            OnPlayerDied?.Invoke(killer);
+            OnScoreUpdated?.Invoke(m_killsLocal, m_deathsLocal);
+
+            // Start respawn timer
+            StartCoroutine(RespawnAfterDelayLocal());
+        }
+
+        private IEnumerator RespawnAfterDelayLocal()
+        {
+            yield return new WaitForSeconds(m_respawnDelay);
+
+            m_currentHealthLocal = m_maxHealth;
+            m_isDeadLocal = false;
+            m_isInvulnerableLocal = true;
+
+            // Fire respawn event
+            OnPlayerRespawned?.Invoke();
+            OnHealthUpdated?.Invoke(m_currentHealthLocal, m_maxHealth);
+
+            // Invulnerability period
+            yield return new WaitForSeconds(m_invulnerabilityDuration);
+            m_isInvulnerableLocal = false;
         }
 
         /// <summary>

@@ -59,9 +59,13 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private float m_damageTimer;
         private float m_respawnTimer;
         private bool m_isRespawning;
+        private Image m_healthBarFill;
 
         private IEnumerator Start()
         {
+            // Auto-find health UI elements if not assigned
+            FindHealthUIElements();
+
             // Wait for local player's health component to be spawned
             while (m_playerHealth == null)
             {
@@ -104,6 +108,38 @@ namespace MRMotifs.SharedActivities.ShootingSample
             if (m_deathPanel != null)
             {
                 m_deathPanel.SetActive(false);
+            }
+        }
+
+        private void FindHealthUIElements()
+        {
+            // Try to find HealthPanel and its children
+            var healthPanel = transform.Find("HealthPanel");
+            if (healthPanel != null)
+            {
+                // Find health text
+                var healthTextObj = healthPanel.Find("HealthText");
+                if (healthTextObj != null && m_healthText == null)
+                {
+                    m_healthText = healthTextObj.GetComponent<TextMeshProUGUI>();
+                }
+
+                // Find health bar fill
+                var healthBarBg = healthPanel.Find("HealthBarBackground");
+                if (healthBarBg != null)
+                {
+                    var healthBarFillObj = healthBarBg.Find("HealthBarFill");
+                    if (healthBarFillObj != null)
+                    {
+                        m_healthBarFill = healthBarFillObj.GetComponent<Image>();
+                    }
+                }
+
+                Debug.Log($"[ShootingHUDMotif] Found health UI - Text: {m_healthText != null}, Fill: {m_healthBarFill != null}");
+            }
+            else
+            {
+                Debug.LogWarning("[ShootingHUDMotif] HealthPanel not found in HUD");
             }
         }
 
@@ -165,9 +201,26 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 m_healthSlider.value = healthPercent;
             }
 
+            // Update health bar fill (scale X based on health percentage)
+            if (m_healthBarFill != null)
+            {
+                var rect = m_healthBarFill.rectTransform;
+                rect.anchorMax = new Vector2(healthPercent, 1);
+                
+                // Change color based on health (green -> yellow -> red)
+                if (healthPercent > 0.5f)
+                {
+                    m_healthBarFill.color = Color.Lerp(Color.yellow, Color.green, (healthPercent - 0.5f) * 2f);
+                }
+                else
+                {
+                    m_healthBarFill.color = Color.Lerp(Color.red, Color.yellow, healthPercent * 2f);
+                }
+            }
+
             if (m_healthText != null)
             {
-                m_healthText.text = $"{current}";
+                m_healthText.text = $"Health: {current}/{max}";
             }
 
             // Show damage indicator if health decreased
