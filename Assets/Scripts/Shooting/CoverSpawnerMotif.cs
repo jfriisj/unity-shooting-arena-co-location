@@ -5,7 +5,7 @@ using Fusion;
 using UnityEngine;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace MRMotifs.Shooting
 {
     /// <summary>
     /// Allows the host to spawn cover objects in the arena.

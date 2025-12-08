@@ -6,7 +6,7 @@ using UnityEngine.UI;
 using TMPro;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace MRMotifs.Shooting
 {
     /// <summary>
     /// Displays player health on the inner side of the right wrist.

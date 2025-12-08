@@ -4,11 +4,11 @@
 using UnityEngine;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace MRMotifs.Shooting
 {
     /// <summary>
     /// Loads and provides audio clips for the shooting game from Resources/Audio folder.
-    /// Attach to the [MR Motif] Shooting Game Manager to auto-assign sounds.
+    /// Subscribes to GameStateEventBus events to play sounds at appropriate times.
     /// Audio files should be placed in Assets/Resources/Audio/ folder.
     /// </summary>
     [MetaCodeSample("MRMotifs-SharedActivities")]
@@ -35,10 +35,18 @@ namespace MRMotifs.SharedActivities.ShootingSample
         public AudioClip RespawnClip => m_respawnClip;
         public AudioClip FireClip => m_fireClip;
 
+        private AudioSource m_audioSource;
+
         private void Awake()
         {
             LoadAudioClips();
-            AssignToGameManager();
+            SetupAudioSource();
+            SubscribeToEvents();
+        }
+
+        private void OnDestroy()
+        {
+            UnsubscribeFromEvents();
         }
 
         private void LoadAudioClips()
@@ -75,6 +83,50 @@ namespace MRMotifs.SharedActivities.ShootingSample
             return clip;
         }
 
+        private void SetupAudioSource()
+        {
+            m_audioSource = GetComponent<AudioSource>();
+            if (m_audioSource == null)
+            {
+                m_audioSource = gameObject.AddComponent<AudioSource>();
+            }
+            m_audioSource.volume = m_volume;
+        }
+
+        private void SubscribeToEvents()
+        {
+            GameStateEventBus.OnRoundStarted += OnRoundStarted;
+            GameStateEventBus.OnRoundEnded += OnRoundEnded;
+            GameStateEventBus.OnCountdownTick += OnCountdownTick;
+        }
+
+        private void UnsubscribeFromEvents()
+        {
+            GameStateEventBus.OnRoundStarted -= OnRoundStarted;
+            GameStateEventBus.OnRoundEnded -= OnRoundEnded;
+            GameStateEventBus.OnCountdownTick -= OnCountdownTick;
+        }
+
+        // Event handlers
+
+        private void OnRoundStarted()
+        {
+            PlayClip(m_roundStartClip);
+        }
+
+        private void OnRoundEnded(Fusion.PlayerRef winner)
+        {
+            PlayClip(m_roundEndClip);
+        }
+
+        private void OnCountdownTick(int countdownValue)
+        {
+            if (countdownValue > 0 && countdownValue <= 3) // Play tick for last 3 seconds
+            {
+                PlayClip(m_countdownTickClip);
+            }
+        }
+
         private void AssignToGameManager()
         {
             var gameManager = GetComponent<ShootingGameManagerMotif>();
@@ -97,6 +149,17 @@ namespace MRMotifs.SharedActivities.ShootingSample
                     roundEndField.SetValue(gameManager, m_roundEndClip);
                     Debug.Log("[ShootingAudioMotif] Assigned RoundEnd sound to GameManager");
                 }
+            }
+        }
+
+        /// <summary>
+        /// Play a clip using the local AudioSource.
+        /// </summary>
+        public void PlayClip(AudioClip clip)
+        {
+            if (clip != null && m_audioSource != null)
+            {
+                m_audioSource.PlayOneShot(clip, m_volume);
             }
         }
 

@@ -4,7 +4,7 @@ using UnityEngine;
 using Meta.XR.MRUtilityKit;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace MRMotifs.Shooting
 {
     /// <summary>
     /// Ensures room mesh colliders are set up for bullet collision detection.

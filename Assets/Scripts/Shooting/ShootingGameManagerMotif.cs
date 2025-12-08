@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using TMPro;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace MRMotifs.Shooting
 {
     /// <summary>
     /// Manages the shooting game state, including round management,
@@ -32,28 +32,12 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [Tooltip("Whether to automatically restart rounds.")]
         [SerializeField] private bool m_autoRestart = true;
 
-        [Header("UI References")]
-        [Tooltip("UI panel showing the scoreboard.")]
-        [SerializeField] private GameObject m_scoreboardPanel;
+        // UI and scoreboard now handled by separate components:
+        // - GameStateUIHandler manages status/timer text
+        // - ScoreboardManagerMotif manages scoreboard panel
+        // - GameInputHandler manages restart input
 
-        [Tooltip("Text showing remaining time.")]
-        [SerializeField] private TextMeshProUGUI m_timerText;
-
-        [Tooltip("Text showing game status.")]
-        [SerializeField] private TextMeshProUGUI m_statusText;
-
-        [Tooltip("Container for player score entries.")]
-        [SerializeField] private Transform m_scoreEntryContainer;
-
-        [Tooltip("Prefab for individual score entry.")]
-        [SerializeField] private GameObject m_scoreEntryPrefab;
-
-        [Header("Audio")]
-        [Tooltip("Sound played when round starts.")]
-        [SerializeField] private AudioClip m_roundStartSound;
-
-        [Tooltip("Sound played when round ends.")]
-        [SerializeField] private AudioClip m_roundEndSound;
+        // Audio now handled by ShootingAudioMotif via event bus
 
         /// <summary>
         /// Current game state.
@@ -92,82 +76,62 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private NetworkArray<int> PackedPlayerScores => default;
 
         private readonly List<PlayerHealthMotif> m_players = new();
-        private readonly Dictionary<PlayerRef, GameObject> m_scoreEntries = new();
-        private AudioSource m_audioSource;
         private float m_roundEndTime;
-        private float m_restartHoldTime;
-        private const float RESTART_HOLD_DURATION = 2f; // Hold both grips for 2 seconds to restart
+        // Input handling now in GameInputHandler
+        // Scoreboard entries now in ScoreboardManagerMotif
+        // Audio source now in ShootingAudioMotif
+
+        private void Awake()
+        {
+            // Prevent device from sleeping to avoid "crashes" when user is inactive (e.g. waiting for round reset)
+            Screen.sleepTimeout = SleepTimeout.NeverSleep;
+        }
 
         public override void Spawned()
         {
             base.Spawned();
 
-            m_audioSource = GetComponent<AudioSource>();
-            if (m_audioSource == null)
-            {
-                m_audioSource = gameObject.AddComponent<AudioSource>();
-            }
-
             if (Object.HasStateAuthority)
             {
                 CurrentGameState = GameState.WaitingForPlayers;
                 RemainingTime = m_roundDuration;
+                
+                // Subscribe to restart requests from GameInputHandler
+                GameStateEventBus.OnRestartRequested += OnRestartRequested;
             }
 
             // Find all existing players
             RefreshPlayerList();
+        }
 
-            UpdateUI();
+        private void OnDestroy()
+        {
+            // Unsubscribe from events
+            GameStateEventBus.OnRestartRequested -= OnRestartRequested;
+        }
+
+        private void OnRestartRequested()
+        {
+            if (!Object.HasStateAuthority) return;
+
+            switch (CurrentGameState)
+            {
+                case GameState.RoundEnd:
+                    RestartRound();
+                    break;
+                case GameState.Playing:
+                    ResetCurrentRound();
+                    break;
+            }
         }
 
         private void Update()
         {
-            // Check for restart input (hold both grip buttons)
-            CheckRestartInput();
-            
-            // Update restart countdown display during RoundEnd
-            if (CurrentGameState == GameState.RoundEnd && m_autoRestart && m_statusText != null)
-            {
-                float timeRemaining = (m_roundEndTime + m_autoRestartDelay) - Time.time;
-                if (timeRemaining > 0)
-                {
-                    // Update the countdown text
-                    var baseText = m_statusText.text.Split('\n')[0];
-                    m_statusText.text = $"{baseText}\nNew round in {Mathf.CeilToInt(timeRemaining)}s...";
-                }
-            }
+            // Input handling now done by GameInputHandler
+            // Auto-restart countdown display now handled by GameStateUIHandler
         }
 
-        private void CheckRestartInput()
-        {
-            // Hold both grip buttons to restart (works in RoundEnd state)
-            bool leftGrip = OVRInput.Get(OVRInput.Button.PrimaryHandTrigger, OVRInput.Controller.LTouch);
-            bool rightGrip = OVRInput.Get(OVRInput.Button.PrimaryHandTrigger, OVRInput.Controller.RTouch);
 
-            if (leftGrip && rightGrip)
-            {
-                m_restartHoldTime += Time.deltaTime;
-
-                if (m_restartHoldTime >= RESTART_HOLD_DURATION)
-                {
-                    m_restartHoldTime = 0f;
-                    
-                    if (CurrentGameState == GameState.RoundEnd)
-                    {
-                        RestartRound();
-                    }
-                    else if (CurrentGameState == GameState.Playing)
-                    {
-                        // During gameplay, reset the round
-                        ResetCurrentRound();
-                    }
-                }
-            }
-            else
-            {
-                m_restartHoldTime = 0f;
-            }
-        }
 
         public override void FixedUpdateNetwork()
         {
@@ -236,8 +200,12 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
         private void StartCountdown()
         {
+            var oldState = CurrentGameState;
             CurrentGameState = GameState.Countdown;
             CountdownValue = 5;
+            
+            // Fire event for state change
+            GameStateEventBus.FireGameStateChanged(oldState, CurrentGameState);
         }
 
         private void UpdateCountdown()
@@ -247,6 +215,9 @@ namespace MRMotifs.SharedActivities.ShootingSample
             if (Runner.Tick % 60 == 0 && CountdownValue > 0)
             {
                 CountdownValue--;
+                
+                // Fire countdown tick event
+                GameStateEventBus.FireCountdownTick(CountdownValue);
 
                 if (CountdownValue <= 0)
                 {
@@ -257,6 +228,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
         private void StartRound()
         {
+            var oldState = CurrentGameState;
             CurrentGameState = GameState.Playing;
             RemainingTime = m_roundDuration;
 
@@ -269,12 +241,17 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 }
             }
 
-            PlaySoundRpc(true);
+            // Fire events
+            GameStateEventBus.FireGameStateChanged(oldState, CurrentGameState);
+            GameStateEventBus.FireRoundStarted();
         }
 
         private void UpdateRoundTimer()
         {
             RemainingTime -= Runner.DeltaTime;
+            
+            // Fire timer update event
+            GameStateEventBus.FireTimerUpdated(RemainingTime);
 
             if (RemainingTime <= 0)
             {
@@ -302,10 +279,15 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
         private void EndRound(PlayerRef winner)
         {
+            var oldState = CurrentGameState;
             CurrentGameState = GameState.RoundEnd;
             m_roundEndTime = Time.time;
+            
+            // Fire events
+            GameStateEventBus.FireGameStateChanged(oldState, CurrentGameState);
+            GameStateEventBus.FireRoundEnded(winner);
+            
             AnnounceWinnerRpc(winner, m_autoRestart ? m_autoRestartDelay : -1f);
-            PlaySoundRpc(false);
         }
 
         private void UpdatePlayerScores()
@@ -327,32 +309,17 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
         private void AnnounceWinnerRpc(PlayerRef winner, float restartDelay)
         {
-            if (m_statusText != null)
+            var winnerText = winner == PlayerRef.None 
+                ? "Time's Up! Round Over" 
+                : $"Player {winner.PlayerId} Wins!";
+            
+            if (restartDelay > 0)
             {
-                var winnerText = winner == PlayerRef.None 
-                    ? "Time's Up! Round Over" 
-                    : $"Player {winner.PlayerId} Wins!";
-                
-                if (restartDelay > 0)
-                {
-                    winnerText += $"\nNew round in {restartDelay:F0}s...";
-                }
-                
-                m_statusText.text = winnerText;
+                winnerText += $"\nNew round in {restartDelay:F0}s...";
             }
-        }
-
-        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-        private void PlaySoundRpc(bool isStart)
-        {
-            if (m_audioSource != null)
-            {
-                var clip = isStart ? m_roundStartSound : m_roundEndSound;
-                if (clip != null)
-                {
-                    m_audioSource.PlayOneShot(clip);
-                }
-            }
+            
+            // Fire winner announcement event instead of direct UI manipulation
+            GameStateEventBus.FireWinnerAnnounced(winnerText);
         }
 
         /// <summary>
@@ -449,10 +416,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private void OnRoundRestartRpc()
         {
             Debug.Log("[ShootingGameManager] Round restarting...");
-            if (m_statusText != null)
-            {
-                m_statusText.text = "New Round Starting...";
-            }
+            // UI updates now handled by GameStateUIHandler via events
         }
 
         /// <summary>
@@ -462,73 +426,12 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private void OnRoundResetRpc()
         {
             Debug.Log("[ShootingGameManager] Round reset!");
-            if (m_statusText != null)
-            {
-                m_statusText.text = "Round Reset!";
-            }
+            // UI updates now handled by GameStateUIHandler via events
         }
 
-        // UI Update callbacks
-        private void OnGameStateChanged()
-        {
-            UpdateUI();
-        }
 
-        private void OnTimerChanged()
-        {
-            if (m_timerText != null)
-            {
-                var minutes = Mathf.FloorToInt(RemainingTime / 60);
-                var seconds = Mathf.FloorToInt(RemainingTime % 60);
-                m_timerText.text = $"{minutes:00}:{seconds:00}";
-            }
-        }
 
-        private void OnCountdownChanged()
-        {
-            if (m_statusText != null && CurrentGameState == GameState.Countdown)
-            {
-                m_statusText.text = CountdownValue > 0 ? $"Starting in {CountdownValue}..." : "GO!";
-            }
-        }
-
-        private void UpdateUI()
-        {
-            if (m_statusText == null)
-            {
-                return;
-            }
-
-            switch (CurrentGameState)
-            {
-                case GameState.WaitingForPlayers:
-                    m_statusText.text = $"Waiting for players ({GetActivePlayerCount()}/{m_minPlayersToStart})";
-                    break;
-
-                case GameState.Countdown:
-                    m_statusText.text = $"Starting in {CountdownValue}...";
-                    break;
-
-                case GameState.Playing:
-                    m_statusText.text = "FIGHT!";
-                    break;
-
-                case GameState.RoundEnd:
-                    // Set by AnnounceWinnerRpc
-                    break;
-            }
-        }
-
-        /// <summary>
-        /// Toggle scoreboard visibility.
-        /// </summary>
-        public void ToggleScoreboard()
-        {
-            if (m_scoreboardPanel != null)
-            {
-                m_scoreboardPanel.SetActive(!m_scoreboardPanel.activeSelf);
-            }
-        }
+        // Scoreboard management now handled by ScoreboardManagerMotif
 
         /// <summary>
         /// Register a new player with the game manager.

@@ -8,7 +8,7 @@ using System.Collections;
 using Meta.XR.Samples;
 using MRMotifs.Shared;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace MRMotifs.Shooting
 {
     /// <summary>
     /// Manages player health, death, and respawn in the shooting game.

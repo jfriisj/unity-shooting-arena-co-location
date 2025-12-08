@@ -7,7 +7,7 @@ using Meta.XR.Samples;
 using Meta.XR.MultiplayerBlocks.Fusion;
 using MRMotifs.Shared;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace MRMotifs.Shooting
 {
     /// <summary>
     /// Handles player shooting mechanics in a co-located multiplayer shooting game.
@@ -78,7 +78,6 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private Transform m_rightMuzzle;
         private Transform m_leftMuzzle;
         private NetworkRunner m_networkRunner;
-        private AudioSource m_spawnedAudioSource;
 
         /// <summary>
         /// The PlayerRef of the owner of this shooting player.
@@ -110,10 +109,25 @@ namespace MRMotifs.SharedActivities.ShootingSample
             
             m_playerHealth = GetComponent<PlayerHealthMotif>();
 
+            // Ensure AudioSource exists
+            if (m_audioSource == null)
+            {
+                m_audioSource = GetComponent<AudioSource>();
+                if (m_audioSource == null)
+                {
+                    m_audioSource = gameObject.AddComponent<AudioSource>();
+                    m_audioSource.spatialBlend = 1.0f; // 3D sound
+                }
+            }
+
             // Require serialized fields - these must be assigned in Inspector
             DebugLogger.RequireSerializedField(m_bulletPrefab, "m_bulletPrefab", this);
-            DebugLogger.RequireSerializedField(m_audioSource, "m_audioSource", this);
-            DebugLogger.RequireSerializedField(m_fireSound, "m_fireSound", this);
+            // m_audioSource is now auto-created if missing
+            // m_fireSound might be set via SetFireSound later, so we warn but don't require strictly if we expect runtime setup
+            if (m_fireSound == null)
+            {
+                DebugLogger.Warning("PLAYER", "m_fireSound is null. Sound will not play unless set via SetFireSound.");
+            }
 
             // Fire points from camera rig
             m_leftFirePoint = m_cameraRig.leftControllerAnchor;
@@ -132,12 +146,6 @@ namespace MRMotifs.SharedActivities.ShootingSample
         {
             // Restore controller visibility when this component is destroyed
             ShowControllerModels();
-
-            // Clean up spawned audio source
-            if (m_spawnedAudioSource != null)
-            {
-                Destroy(m_spawnedAudioSource);
-            }
         }
 
         private void SpawnWeaponModels()
@@ -522,6 +530,22 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
             // Spawn new weapons
             SpawnWeaponModels();
+        }
+
+        /// <summary>
+        /// Sets the fire sound clip at runtime.
+        /// </summary>
+        public void SetFireSound(AudioClip clip)
+        {
+            m_fireSound = clip;
+        }
+
+        /// <summary>
+        /// Sets the muzzle flash prefab at runtime.
+        /// </summary>
+        public void SetMuzzleFlashPrefab(GameObject prefab)
+        {
+            m_muzzleFlashPrefab = prefab;
         }
     }
 }

@@ -7,7 +7,7 @@ using System.Reflection;
 using Meta.XR.Samples;
 using Meta.XR.MultiplayerBlocks.Fusion;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace MRMotifs.Shooting
 {
     /// <summary>
     /// Enables single-player practice mode for testing shooting mechanics without networking.

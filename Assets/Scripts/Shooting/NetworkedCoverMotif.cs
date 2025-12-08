@@ -5,7 +5,7 @@ using Fusion;
 using UnityEngine;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace MRMotifs.Shooting
 {
     /// <summary>
     /// A networked cover object that can be spawned by the host.

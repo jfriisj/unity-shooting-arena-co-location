@@ -7,7 +7,7 @@ using System.Collections;
 using Meta.XR.Samples;
 using MRMotifs.Shared;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace MRMotifs.Shooting
 {
     /// <summary>
     /// Represents a networked bullet/projectile in the shooting game.
@@ -38,7 +38,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
         [Header("Physics Settings")]
         [Tooltip("Use gravity for realistic bullet drop.")]
-        [SerializeField] private bool m_useGravity = true;
+        [SerializeField] private bool m_useGravity = false;
 
         [Tooltip("Air resistance (drag).")]
         [SerializeField] private float m_drag = 0.1f;
@@ -76,6 +76,8 @@ namespace MRMotifs.SharedActivities.ShootingSample
         /// </summary>
         [Networked] private NetworkBool HasHit { get; set; }
 
+        private PlayerHealthMotif m_shooterPlayerReference;
+
         private Rigidbody m_rigidbody;
         private float m_lifetime;
         private float m_spawnTime;
@@ -106,6 +108,20 @@ namespace MRMotifs.SharedActivities.ShootingSample
             m_previousPosition = transform.position;
             
             DebugLogger.Bullet($"Spawned | pos={transform.position:F2} vel={NetworkedVelocity:F1} owner={OwnerPlayer} lifetime={m_lifetime:F1}s", this);
+
+            // Resolve shooter reference
+            if (OwnerPlayer != PlayerRef.None)
+            {
+                var players = FindObjectsByType<PlayerHealthMotif>(FindObjectsSortMode.None);
+                foreach (var player in players)
+                {
+                    if (player.Object != null && player.Object.InputAuthority == OwnerPlayer)
+                    {
+                        m_shooterPlayerReference = player;
+                        break;
+                    }
+                }
+            }
 
             // Apply velocity if we're the authority
             if (Object.HasStateAuthority && NetworkedVelocity != Vector3.zero)
@@ -386,8 +402,30 @@ namespace MRMotifs.SharedActivities.ShootingSample
         {
             HasHit = true;
             
+            // Create damage callback to track kills/hits
+            IDamageable.DamageCallback damageCallback = (affected, damage, died) =>
+            {
+                // Track drone kill if target died
+                if (died && affected is DroneMotif)
+                {
+                    var shooterStats = m_shooterPlayerReference?.PlayerStats;
+                    if (shooterStats != null)
+                    {
+                        shooterStats.AddDroneKill();
+                        DebugLogger.Shooting($"Player {m_shooterPlayerReference.name} killed drone", this);
+                    }
+                }
+                
+                // Track hit for accuracy
+                var shooterPlayerStats = m_shooterPlayerReference?.PlayerStats;
+                if (shooterPlayerStats != null)
+                {
+                    shooterPlayerStats.RecordShotHit(damage);
+                }
+            };
+            
             // Apply damage through IDamageable interface
-            damageable.TakeDamage(m_damage, point, normal);
+            damageable.TakeDamage(m_damage, point, normal, damageCallback);
             
             // Spawn player hit effect
             SpawnHitEffectRpc(point, normal, true, false);

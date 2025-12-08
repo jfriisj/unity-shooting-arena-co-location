@@ -3,7 +3,7 @@
 using UnityEngine;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace MRMotifs.Shooting
 {
     /// <summary>
     /// Disables the Quest Guardian boundary system to allow free movement in passthrough mode.

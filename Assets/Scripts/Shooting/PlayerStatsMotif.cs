@@ -6,7 +6,7 @@ using UnityEngine;
 using Meta.XR.Samples;
 using MRMotifs.Shared;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace MRMotifs.Shooting
 {
     /// <summary>
     /// Tracks player statistics in the shooting game.
@@ -65,6 +65,12 @@ namespace MRMotifs.SharedActivities.ShootingSample
         public float TimeSurvived { get; set; }
 
         /// <summary>
+        /// Number of drones killed by this player.
+        /// </summary>
+        [Networked]
+        public int DroneKills { get; set; }
+
+        /// <summary>
         /// Calculates shooting accuracy as a percentage (0-1).
         /// </summary>
         public float Accuracy => ShotsFired > 0 ? (float)ShotsHit / ShotsFired : 0f;
@@ -95,6 +101,18 @@ namespace MRMotifs.SharedActivities.ShootingSample
             {
                 Deaths++;
                 DebugLogger.Player($"Death recorded | total={Deaths}", this);
+            }
+        }
+
+        /// <summary>
+        /// Increments drone kill count.
+        /// </summary>
+        public void AddDroneKill()
+        {
+            if (Object.HasStateAuthority)
+            {
+                DroneKills++;
+                DebugLogger.Player($"Drone kill recorded | total={DroneKills}", this);
             }
         }
 

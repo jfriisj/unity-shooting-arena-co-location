@@ -4,7 +4,7 @@
 using UnityEngine;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace MRMotifs.Shooting
 {
     /// <summary>
     /// Central configuration for the shooting game.
@@ -68,6 +68,28 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [Range(1, 10)]
         public float bulletLifetime = 5f;
 
+        [Header("=== DRONE SETTINGS ===")]
+        
+        [Tooltip("Health for each drone")]
+        [Range(10, 200)]
+        public int droneHealth = 50;
+        
+        [Tooltip("Number of drones per wave")]
+        [Range(1, 15)]
+        public int dronesPerWave = 5;
+        
+        [Tooltip("Maximum drones alive at once")]
+        [Range(1, 8)]
+        public int maxLiveDrones = 4;
+        
+        [Tooltip("Speed when drones chase players")]
+        [Range(1f, 8f)]
+        public float droneSpeed = 3f;
+        
+        [Tooltip("Time between drone spawns in seconds")]
+        [Range(1f, 10f)]
+        public float droneSpawnInterval = 3f;
+
         [Header("=== PRESETS ===")]
         
         [Tooltip("Quick preset selection.")]
@@ -114,6 +136,11 @@ namespace MRMotifs.SharedActivities.ShootingSample
                     bulletDamage = 10;
                     bulletSpeed = 60f;
                     fireRate = 0.1f;
+                    droneHealth = 50;
+                    dronesPerWave = 5;
+                    maxLiveDrones = 4;
+                    droneSpeed = 3f;
+                    droneSpawnInterval = 3f;
                     break;
 
                 case GamePreset.QuickMatch:
@@ -125,6 +152,11 @@ namespace MRMotifs.SharedActivities.ShootingSample
                     bulletDamage = 25;
                     bulletSpeed = 80f;
                     fireRate = 0.1f;
+                    droneHealth = 30;
+                    dronesPerWave = 8;
+                    maxLiveDrones = 6;
+                    droneSpeed = 4f;
+                    droneSpawnInterval = 2f;
                     break;
 
                 case GamePreset.Marathon:
@@ -136,6 +168,11 @@ namespace MRMotifs.SharedActivities.ShootingSample
                     bulletDamage = 10;
                     bulletSpeed = 60f;
                     fireRate = 0.25f;
+                    droneHealth = 80;
+                    dronesPerWave = 4;
+                    maxLiveDrones = 3;
+                    droneSpeed = 2.5f;
+                    droneSpawnInterval = 4f;
                     break;
 
                 case GamePreset.OneShot:
@@ -147,6 +184,11 @@ namespace MRMotifs.SharedActivities.ShootingSample
                     bulletDamage = 100;
                     bulletSpeed = 100f;
                     fireRate = 0.5f;
+                    droneHealth = 1;
+                    dronesPerWave = 10;
+                    maxLiveDrones = 8;
+                    droneSpeed = 1.5f;
+                    droneSpawnInterval = 1f;
                     break;
 
                 case GamePreset.Training:
@@ -158,6 +200,11 @@ namespace MRMotifs.SharedActivities.ShootingSample
                     bulletDamage = 10;
                     bulletSpeed = 60f;
                     fireRate = 0.1f;
+                    droneHealth = 25;
+                    dronesPerWave = 3;
+                    maxLiveDrones = 2;
+                    droneSpeed = 2f;
+                    droneSpawnInterval = 5f;
                     break;
             }
 
@@ -174,6 +221,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
             ApplyToPlayerHealth();
             ApplyToBullets();
             ApplyToShootingPlayer();
+            ApplyToDrones();
 
             Debug.Log("[ShootingGameConfig] Configuration applied to all components");
         }
@@ -219,6 +267,13 @@ namespace MRMotifs.SharedActivities.ShootingSample
             ShootingPlayerMotif.ConfigFireRate = fireRate;
             ShootingPlayerMotif.ConfigBulletSpeed = bulletSpeed;
             ShootingPlayerMotif.ConfigBulletLifetime = bulletLifetime;
+        }
+
+        private void ApplyToDrones()
+        {
+            // This will be applied when drones spawn
+            DroneMotif.ConfigHealth = droneHealth;
+            DroneMotif.ConfigSpeed = droneSpeed;
         }
 
         private void SetField(System.Type type, object target, string fieldName, object value, System.Reflection.BindingFlags flags)

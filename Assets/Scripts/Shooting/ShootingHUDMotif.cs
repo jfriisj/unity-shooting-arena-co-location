@@ -7,7 +7,7 @@ using UnityEngine.UI;
 using TMPro;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace MRMotifs.Shooting
 {
     /// <summary>
     /// Displays player HUD showing health, ammo, and score.

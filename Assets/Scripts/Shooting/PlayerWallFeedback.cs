@@ -3,7 +3,7 @@
 using UnityEngine;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace MRMotifs.Shooting
 {
     /// <summary>
     /// Provides haptic feedback when the player touches walls or room mesh.

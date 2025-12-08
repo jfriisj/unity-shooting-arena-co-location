@@ -6,9 +6,9 @@ using UnityEngine;
 using Meta.XR.MultiplayerBlocks.Shared;
 using Meta.XR.MultiplayerBlocks.Fusion;
 using Meta.XR.Samples;
-using MRMotifs.SharedActivities.Spawning;
+using MRMotifs.Shooting.Spawning;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace MRMotifs.Shooting
 {
     /// <summary>
     /// Scene-based setup for the shooting game. Attaches shooting components to players
@@ -20,6 +20,9 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [Header("Prefabs")]
         [Tooltip("The networked bullet prefab.")]
         [SerializeField] private NetworkObject m_bulletPrefab;
+
+        [Tooltip("Muzzle flash prefab to spawn when firing.")]
+        [SerializeField] private GameObject m_muzzleFlashPrefab;
 
         [Header("Weapon Visuals")]
         [Tooltip("The weapon model prefab to attach to controllers (e.g., from FA FPS Weapons Pack).")]
@@ -140,6 +143,22 @@ namespace MRMotifs.SharedActivities.ShootingSample
             if (m_bulletPrefab != null)
             {
                 shootingPlayer.SetBulletPrefab(m_bulletPrefab);
+            }
+
+            // Configure muzzle flash
+            if (m_muzzleFlashPrefab != null)
+            {
+                shootingPlayer.SetMuzzleFlashPrefab(m_muzzleFlashPrefab);
+            }
+
+            // Configure audio
+            if (m_gameManager != null)
+            {
+                var audioMotif = m_gameManager.GetComponent<ShootingAudioMotif>();
+                if (audioMotif != null && audioMotif.FireClip != null)
+                {
+                    shootingPlayer.SetFireSound(audioMotif.FireClip);
+                }
             }
 
             // Configure weapon visuals
