@@ -52,8 +52,6 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [SerializeField] private float m_damageIndicatorDuration = 0.5f;
 
         [Tooltip("Distance from camera for HUD.")]
-        [SerializeField] private float m_hudDistance = 2f;
-
         private PlayerHealthMotif m_playerHealth;
         private float m_hitMarkerTimer;
         private float m_damageTimer;

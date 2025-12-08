@@ -40,9 +40,6 @@ namespace MRMotifs.SharedActivities.Metrics
         [Tooltip("Maximum acceptable network latency in ms.")]
         [SerializeField] private float m_maxLatencyMs = 75f;
         
-        [Tooltip("Maximum acceptable calibration error in mm.")]
-        [SerializeField] private float m_maxCalibrationErrorMm = 10f;
-        
         [Header("References")]
         [Tooltip("Reference to CalibrationAccuracyTracker for alignment data.")]
         [SerializeField] private CalibrationAccuracyTracker m_calibrationTracker;

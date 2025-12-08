@@ -94,7 +94,6 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private readonly List<PlayerHealthMotif> m_players = new();
         private readonly Dictionary<PlayerRef, GameObject> m_scoreEntries = new();
         private AudioSource m_audioSource;
-        private bool m_hasSpawned;
         private float m_roundEndTime;
         private float m_restartHoldTime;
         private const float RESTART_HOLD_DURATION = 2f; // Hold both grips for 2 seconds to restart
@@ -102,7 +101,6 @@ namespace MRMotifs.SharedActivities.ShootingSample
         public override void Spawned()
         {
             base.Spawned();
-            m_hasSpawned = true;
 
             m_audioSource = GetComponent<AudioSource>();
             if (m_audioSource == null)

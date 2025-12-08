@@ -47,9 +47,10 @@ def load_session_data(session_dir: str) -> pd.DataFrame:
     """Load and merge all metrics CSVs from a session directory."""
     all_data = []
     
-    # Find all CSV files in headset subdirectories
+    # Find all CSV files in headset subdirectories (check both H*/ and H*/metrics/)
     for headset_dir in glob.glob(os.path.join(session_dir, 'H*')):
         csv_files = glob.glob(os.path.join(headset_dir, '*.csv'))
+        csv_files.extend(glob.glob(os.path.join(headset_dir, 'metrics', '*.csv')))
         
         for csv_file in csv_files:
             try:
@@ -94,9 +95,9 @@ def calculate_statistics(df: pd.DataFrame) -> dict:
         'fps_target_achieved_pct': (df['frame_rate_fps'] >= THRESHOLDS['fps_target']).mean() * 100,
         'fps_minimum_achieved_pct': (df['frame_rate_fps'] >= THRESHOLDS['fps_minimum']).mean() * 100,
         
-        # Frame time
-        'frame_time_mean_ms': df['frame_time_ms'].mean(),
-        'frame_time_max_ms': df['frame_time_ms'].max(),
+        # Frame time (optional)
+        'frame_time_mean_ms': df['frame_time_ms'].mean() if 'frame_time_ms' in df.columns else 0,
+        'frame_time_max_ms': df['frame_time_ms'].max() if 'frame_time_ms' in df.columns else 0,
         
         # Network latency
         'latency_mean_ms': df['network_latency_ms'].mean(),
@@ -108,10 +109,10 @@ def calculate_statistics(df: pd.DataFrame) -> dict:
         'latency_p99_ms': df['network_latency_ms'].quantile(0.99),
         'latency_target_achieved_pct': (df['network_latency_ms'] <= THRESHOLDS['latency_target_ms']).mean() * 100,
         
-        # Packet loss
-        'packet_loss_mean_pct': df['packet_loss_pct'].mean(),
-        'packet_loss_max_pct': df['packet_loss_pct'].max(),
-        'packet_loss_target_achieved_pct': (df['packet_loss_pct'] <= THRESHOLDS['packet_loss_target_pct']).mean() * 100,
+        # Packet loss (optional)
+        'packet_loss_mean_pct': df['packet_loss_pct'].mean() if 'packet_loss_pct' in df.columns else 0,
+        'packet_loss_max_pct': df['packet_loss_pct'].max() if 'packet_loss_pct' in df.columns else 0,
+        'packet_loss_target_achieved_pct': (df['packet_loss_pct'] <= THRESHOLDS['packet_loss_target_pct']).mean() * 100 if 'packet_loss_pct' in df.columns else 100,
         
         # Calibration
         'calibration_mean_mm': df['calibration_error_mm'].mean(),
@@ -161,7 +162,7 @@ def calculate_per_headset_statistics(df: pd.DataFrame) -> pd.DataFrame:
             'latency_mean_ms': hdf['network_latency_ms'].mean(),
             'latency_max_ms': hdf['network_latency_ms'].max(),
             'calibration_mean_mm': hdf['calibration_error_mm'].mean(),
-            'packet_loss_mean_pct': hdf['packet_loss_pct'].mean(),
+            'packet_loss_mean_pct': hdf['packet_loss_pct'].mean() if 'packet_loss_pct' in hdf.columns else 0,
             'battery_drain_pct': hdf['battery_level'].iloc[0] - hdf['battery_level'].iloc[-1],
         }
         stats_list.append(stats)

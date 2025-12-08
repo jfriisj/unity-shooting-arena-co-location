@@ -38,6 +38,10 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [Tooltip("Color to flash when hit.")]
         [SerializeField] private Color m_hitFlashColor = Color.red;
 
+        [Tooltip("Duration of hit flash effect (seconds).")]
+        [Range(0.05f, 1f)]
+        [SerializeField] private float m_hitFlashDuration = 0.1f;
+
         [Header("Audio")]
         [Tooltip("Sound played when taking damage.")]
         [SerializeField] private AudioClip m_hitSound;
@@ -319,7 +323,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
             if (m_playerRenderer != null)
             {
                 m_playerRenderer.material.color = m_hitFlashColor;
-                yield return new WaitForSeconds(0.1f);
+                yield return new WaitForSeconds(m_hitFlashDuration);
                 m_playerRenderer.material.color = m_originalColor;
             }
         }

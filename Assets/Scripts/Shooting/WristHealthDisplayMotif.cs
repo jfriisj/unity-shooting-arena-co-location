@@ -20,7 +20,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [SerializeField] private Vector3 m_positionOffset = new Vector3(-0.08f, 0.02f, -0.02f);
 
         [Tooltip("Rotation offset (Euler angles) - faces player when looking at inner wrist.")]
-        [SerializeField] private Vector3 m_rotationOffset = new Vector3(0f, 0f, 0f);
+        [SerializeField] private Vector3 m_rotationOffset = new Vector3(0f, 90f, 0f);
 
         [Tooltip("Scale of the health display.")]
         [SerializeField] private float m_scale = 0.0008f;

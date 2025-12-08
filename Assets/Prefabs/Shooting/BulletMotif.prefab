@@ -16,9 +16,9 @@ GameObject:
   - component: {fileID: 4316951302534558789}
   - component: {fileID: 3315173510238888226}
   - component: {fileID: 2338309738527079604}
-  m_Layer: 0
+  m_Layer: 9
   m_Name: BulletMotif
-  m_TagString: Untagged
+  m_TagString: Bullet
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -288,5 +288,15 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_damage: 10
   m_hitEffectPrefab: {fileID: 6151908392494861471, guid: 1c0d64f152cd2b342b15c8b7d6ad5c9b, type: 3}
+  m_playerHitEffectPrefab: {fileID: 0}
+  m_bulletCollisionVFXPrefab: {fileID: 0}
   m_trailRenderer: {fileID: 0}
+  m_useGravity: 1
+  m_drag: 0.1
+  m_ricochetChance: 0.3
+  m_ricochetAngleThreshold: 30
+  m_ricochetEnergyMultiplier: 0.6
+  m_wallLayers:
+    serializedVersion: 2
+    m_Bits: 1024
   m_hitSound: {fileID: 0}

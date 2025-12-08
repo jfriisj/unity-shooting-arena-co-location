@@ -19,6 +19,11 @@ namespace MRMotifs.ColocatedExperiences.Colocation
         // Reference position for drift tracking (camera rig position after calibration)
         private Vector3 m_referenceRigPosition;
         private bool m_isHost = false;
+        
+        /// <summary>
+        /// Whether calibration/alignment has been completed.
+        /// </summary>
+        public bool HasCalibrated => m_hasCalibrated;
 
         private void Awake()
         {

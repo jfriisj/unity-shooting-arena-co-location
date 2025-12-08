@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 6859835874536822899}
   - component: {fileID: 7121571860471547849}
   - component: {fileID: 5001344626819842674}
+  - component: {fileID: 6363780838276176678}
   m_Layer: 0
   m_Name: '[MR Motifs] SSA Manager'
   m_TagString: Untagged
@@ -51,6 +52,7 @@ MonoBehaviour:
   NestedObjects: []
   NetworkedBehaviours:
   - {fileID: 5001344626819842674}
+  - {fileID: 6363780838276176678}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &5001344626819842674
 MonoBehaviour:
@@ -67,3 +69,18 @@ MonoBehaviour:
   m_anchorPlacementMode: 1
   m_placementButton: 8192
   m_placementIndicatorPrefab: {fileID: 0}
+--- !u!114 &6363780838276176678
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4752380042313195190}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ddd48c0f54ac6094c93b4c0b4ed1c780, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_enableRoomSharing: 1
+  m_enableGlobalMeshColliders: 1
+  m_mrukWaitTimeout: 10

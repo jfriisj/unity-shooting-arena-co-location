@@ -29,6 +29,8 @@ TagManager:
   - QDSUITextInputField
   - SamplesInfoPanel
   - QDSUIToggleCheckboxRadio
+  - RoomMesh
+  - Bullet
   layers:
   - Default
   - TransparentFX
@@ -38,10 +40,10 @@ TagManager:
   - UI
   - MRUK
   - 
-  - 
-  - 
-  - 
-  - 
+  - Player
+  - Bullet
+  - RoomMesh
+  - Avatar
   - 
   - 
   - 
@@ -61,7 +63,7 @@ TagManager:
   - 
   - 
   - XR Simulation
-  - 
+  - XR Simulation
   m_SortingLayers:
   - name: Default
     uniqueID: 0

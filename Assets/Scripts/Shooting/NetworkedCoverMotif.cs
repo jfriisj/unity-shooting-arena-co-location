@@ -21,6 +21,15 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [Tooltip("Color of the cover object.")]
         [SerializeField] private Color m_coverColor = new Color(0.3f, 0.3f, 0.35f, 0.8f);
 
+        [Tooltip("Material smoothness value (0-1).")]
+        [Range(0f, 1f)]
+        [SerializeField] private float m_materialSmoothness = 0.2f;
+
+        [Header("Network Settings")]
+        [Tooltip("Speed of position/rotation interpolation for network sync.")]
+        [Range(1f, 50f)]
+        [SerializeField] private float m_interpolationSpeed = 10f;
+
         /// <summary>
         /// Networked position for synchronization.
         /// </summary>
@@ -77,8 +86,8 @@ namespace MRMotifs.SharedActivities.ShootingSample
             if (!Object.HasStateAuthority)
             {
                 // Interpolate to networked position
-                transform.position = Vector3.Lerp(transform.position, NetworkedPosition, 10f * Runner.DeltaTime);
-                transform.rotation = Quaternion.Slerp(transform.rotation, NetworkedRotation, 10f * Runner.DeltaTime);
+                transform.position = Vector3.Lerp(transform.position, NetworkedPosition, m_interpolationSpeed * Runner.DeltaTime);
+                transform.rotation = Quaternion.Slerp(transform.rotation, NetworkedRotation, m_interpolationSpeed * Runner.DeltaTime);
             }
         }
 
@@ -107,7 +116,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
             // Create a simple unlit material
             var material = new Material(Shader.Find("Universal Render Pipeline/Lit"));
             material.color = m_coverColor;
-            material.SetFloat("_Smoothness", 0.2f);
+            material.SetFloat("_Smoothness", m_materialSmoothness);
             return material;
         }
     }

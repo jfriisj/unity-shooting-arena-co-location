@@ -273,3 +273,608 @@ For room mesh collision to work on ALL devices:
 7. **Avoid over-engineering** - Don't add complexity unless absolutely necessary
 8. **Use groupUuid from Colocation Discovery** - Don't generate your own UUIDs for anchor sharing
 9. **Client never scans room** - Always use Space Sharing to load host's room on client
+
+---
+
+# 📚 Example Code Reference Guide
+
+The `example code/MRMotifs/` folder contains Meta's official MR Motif samples. This section provides detailed analysis of each script to help you correctly implement features in this project.
+
+## 🎯 Category 1: Networked Projectiles (For Shooting Arena)
+
+### `BallSpawnerMotif.cs` - Template for Bullet System
+**Location:** `example code/MRMotifs/ColocatedExperiences/Scripts/BouncingBall/BallManagerMotif.cs`
+
+**Purpose:** Spawns networked projectiles that all players can see and interact with.
+
+**Key Patterns:**
+```csharp
+#if FUSION2
+public class BallSpawnerMotif : NetworkBehaviour
+{
+    [SerializeField] private NetworkObject projectilePrefab;  // Must have NetworkObject component
+    [SerializeField] private float fireForce = 1.0f;
+    [SerializeField] private float lifeTime = 5.0f;
+    
+    private Transform m_firePoint;
+    
+    public override void Spawned()
+    {
+        // Get spawn point from camera (headset direction)
+        if (Camera.main != null)
+            m_firePoint = Camera.main.transform;
+    }
+    
+    private void Update()
+    {
+        // Check for trigger press
+        if (!OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger))
+            return;
+            
+        // Request authority if needed, then spawn
+        if (!Object.HasStateAuthority)
+            Object.RequestStateAuthority();
+        SpawnProjectile();
+    }
+    
+    private void SpawnProjectile()
+    {
+        // Runner.Spawn() creates networked object visible to all clients
+        var ball = Runner.Spawn(projectilePrefab, m_firePoint.position, m_firePoint.rotation);
+        
+        // Apply physics impulse
+        var rb = ball.GetComponent<Rigidbody>();
+        if (rb)
+            rb.AddForce(m_firePoint.forward * fireForce, ForceMode.Impulse);
+            
+        // Auto-despawn after lifetime
+        StartCoroutine(DespawnAfterDelay(ball, lifeTime));
+    }
+    
+    private IEnumerator DespawnAfterDelay(NetworkObject obj, float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        if (obj && Runner.IsRunning && obj.HasStateAuthority)
+            Runner.Despawn(obj);
+    }
+}
+#endif
+```
+
+**How to Adapt for Bullets:**
+1. Change `projectilePrefab` to your bullet prefab (must have `NetworkObject` + `Rigidbody`)
+2. Increase `fireForce` for faster bullets
+3. Decrease `lifeTime` (bullets are faster than balls)
+4. Add hit detection via `OnCollisionEnter` in a separate script on the bullet prefab
+
+### `BouncingBallMotif.cs` - Projectile Behavior Script
+**Purpose:** Attached to the projectile prefab to handle collision sounds.
+
+```csharp
+public class BouncingBallMotif : MonoBehaviour
+{
+    [SerializeField] private AudioClip spawnSound;
+    [SerializeField] private AudioClip ballSound;
+    private AudioSource m_audioSource;
+
+    private void Awake()
+    {
+        m_audioSource = GetComponent<AudioSource>();
+        m_audioSource.PlayOneShot(spawnSound);  // Play on spawn
+    }
+
+    private void OnCollisionEnter(Collision other)
+    {
+        var impactStrength = other.relativeVelocity.magnitude;
+        if (impactStrength > 5.0f)
+            m_audioSource.PlayOneShot(ballSound);  // Play on hard impact
+    }
+}
+```
+
+---
+
+## 🎯 Category 2: Colocation & Alignment
+
+### `ColocationManager.cs` - Camera Rig Alignment
+**Location:** `example code/MRMotifs/ColocatedExperiences/Scripts/Colocation/ColocationManager.cs`
+
+**Purpose:** Aligns the player's OVRCameraRig to a shared spatial anchor so all players share the same coordinate system.
+
+**Key Patterns:**
+```csharp
+public class ColocationManager : MonoBehaviour
+{
+    private Transform m_cameraRigTransform;
+    
+    private void Awake()
+    {
+        m_cameraRigTransform = FindAnyObjectByType<OVRCameraRig>().transform;
+    }
+    
+    /// <summary>
+    /// Call this when a shared anchor is loaded to align the player.
+    /// </summary>
+    public void AlignUserToAnchor(OVRSpatialAnchor anchor)
+    {
+        if (!anchor || !anchor.Localized)
+        {
+            Debug.LogError("Invalid or un-localized anchor");
+            return;
+        }
+        
+        var anchorTransform = anchor.transform;
+        
+        // The magic formula for camera rig alignment:
+        m_cameraRigTransform.position = anchorTransform.InverseTransformPoint(Vector3.zero);
+        m_cameraRigTransform.eulerAngles = new Vector3(0, -anchorTransform.eulerAngles.y, 0);
+    }
+}
+```
+
+**When to Use:** After `OVRSpatialAnchor.LoadUnboundSharedAnchorsAsync()` succeeds and anchor is localized.
+
+### `SharedSpatialAnchorManager.cs` - Full Anchor Sharing Flow
+**Location:** `example code/MRMotifs/ColocatedExperiences/Scripts/Colocation/SharedSpatialAnchorManager.cs`
+
+**Purpose:** Complete implementation of anchor-based colocation using Bluetooth discovery.
+
+**Host Flow:**
+```csharp
+// 1. Advertise session via Bluetooth
+var result = await OVRColocationSession.StartAdvertisementAsync(null);
+m_sharedAnchorGroupId = result.Value;  // Get groupUuid
+
+// 2. Create anchor at host position
+var anchor = await CreateAnchor(position, rotation);
+
+// 3. Save anchor locally
+await anchor.SaveAnchorAsync();
+
+// 4. Share anchor to group
+await OVRSpatialAnchor.ShareAsync(new List<OVRSpatialAnchor> { anchor }, m_sharedAnchorGroupId);
+```
+
+**Client Flow:**
+```csharp
+// 1. Discover nearby session
+OVRColocationSession.ColocationSessionDiscovered += OnColocationSessionDiscovered;
+await OVRColocationSession.StartDiscoveryAsync();
+
+private void OnColocationSessionDiscovered(OVRColocationSession.Data session)
+{
+    m_sharedAnchorGroupId = session.AdvertisementUuid;  // Get groupUuid from host
+    LoadAndAlignToAnchor(m_sharedAnchorGroupId);
+}
+
+// 2. Load shared anchors
+var unboundAnchors = new List<OVRSpatialAnchor.UnboundAnchor>();
+await OVRSpatialAnchor.LoadUnboundSharedAnchorsAsync(groupUuid, unboundAnchors);
+
+// 3. Localize and bind anchor
+foreach (var unbound in unboundAnchors)
+{
+    if (await unbound.LocalizeAsync())
+    {
+        var anchorGO = new GameObject("Anchor");
+        var spatialAnchor = anchorGO.AddComponent<OVRSpatialAnchor>();
+        unbound.BindTo(spatialAnchor);
+        
+        // 4. Align camera rig
+        m_colocationManager.AlignUserToAnchor(spatialAnchor);
+    }
+}
+```
+
+**Anchor Placement Modes:**
+```csharp
+public enum AnchorPlacementMode
+{
+    AtOrigin,           // Anchor at Vector3.zero
+    AtHostPosition,     // Anchor at host's headset position (projected to floor)
+    ManualPlacement     // Host presses trigger to confirm anchor location
+}
+```
+
+### `SpaceSharingManager.cs` - Room Mesh Sharing
+**Location:** `example code/MRMotifs/ColocatedExperiences/Scripts/Space Sharing/SpaceSharingManager.cs`
+
+**Purpose:** Shares the host's MRUK room mesh so clients have physics collision.
+
+**Key Patterns:**
+```csharp
+public class SpaceSharingManager : NetworkBehaviour
+{
+    // Networked strings to share room data with clients
+    [Networked] private NetworkString<_512> NetworkedRoomUuids { get; set; }
+    [Networked] private NetworkString<_256> NetworkedRemoteFloorPose { get; set; }
+    
+    // Host: Share rooms after colocation advertisement
+    private async void ShareMrukRooms()
+    {
+        var rooms = MRUK.Instance.Rooms;
+        var result = await MRUK.Instance.ShareRoomsAsync(rooms, m_sharedAnchorGroupId);
+        
+        // Store UUIDs for clients to load
+        NetworkedRoomUuids = string.Join(",", rooms.Select(r => r.Anchor.Uuid));
+        
+        // Store floor pose for alignment
+        var pose = rooms[0].FloorAnchor.transform;
+        NetworkedRemoteFloorPose = $"{pose.position.x},{pose.position.y},{pose.position.z},...";
+    }
+    
+    // Client: Load shared rooms
+    private async void LoadSharedRoom(Guid groupUuid)
+    {
+        var roomUuids = NetworkedRoomUuids.ToString().Split(',').Select(Guid.Parse).ToArray();
+        var remoteFloorPose = ParsePose(NetworkedRemoteFloorPose.ToString());
+        
+        // This loads room mesh AND aligns client automatically
+        var result = await MRUK.Instance.LoadSceneFromSharedRooms(
+            roomUuids, 
+            groupUuid, 
+            (roomUuids[0], remoteFloorPose)
+        );
+    }
+}
+```
+
+**Why Use Space Sharing:**
+- Without it, only host has room collision
+- `LoadSceneFromSharedRooms()` creates `MeshCollider` on client
+- Both players can now collide with walls/floor
+
+---
+
+## 🎯 Category 3: Avatar & Object Synchronization
+
+### `AvatarMovementHandlerMotif.cs` - Networked Avatar Positions
+**Location:** `example code/MRMotifs/SharedActivities/Scripts/Avatars/AvatarMovementHandlerMotif.cs`
+
+**Purpose:** Syncs avatar positions relative to an "object of interest" so moving the object moves all avatars.
+
+**Key Patterns:**
+```csharp
+public class AvatarMovementHandlerMotif : NetworkBehaviour
+{
+    // Networked arrays for up to 8 players
+    [Networked, Capacity(8)]
+    private NetworkArray<Vector3> AvatarPositions => default;
+    
+    [Networked, Capacity(8)]
+    private NetworkArray<Quaternion> AvatarRotations => default;
+    
+    private GameObject m_objectOfInterest;  // Parent object (e.g., chess board)
+    private AvatarBehaviourFusion m_localAvatar;
+    private readonly List<AvatarBehaviourFusion> m_remoteAvatars = new();
+    
+    // Send local avatar position as offset from object
+    private void SendAvatarOffset()
+    {
+        var relativePosition = m_objectOfInterest.transform.InverseTransformPoint(m_localAvatar.transform.position);
+        var relativeRotation = Quaternion.Inverse(m_objectOfInterest.transform.rotation) * m_localAvatar.transform.rotation;
+        
+        SendPositionAndRotationRpc(avatarIndex, relativePosition, relativeRotation);
+    }
+    
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void SendPositionAndRotationRpc(int avatarIndex, Vector3 pos, Quaternion rot)
+    {
+        AvatarPositions.Set(avatarIndex, pos);
+        AvatarRotations.Set(avatarIndex, rot);
+    }
+    
+    // Update remote avatars from networked data
+    private void UpdateRemoteAvatars()
+    {
+        foreach (var remoteAvatar in m_remoteAvatars)
+        {
+            var index = GetAvatarIndex(remoteAvatar);
+            var worldPosition = m_objectOfInterest.transform.TransformPoint(AvatarPositions.Get(index));
+            var worldRotation = m_objectOfInterest.transform.rotation * AvatarRotations.Get(index);
+            
+            remoteAvatar.transform.position = worldPosition;
+            remoteAvatar.transform.rotation = worldRotation;
+        }
+    }
+}
+```
+
+**Key Insight:** Remote avatars are parented to the object of interest, so moving the object moves all avatars together.
+
+### `ChessBoardHandlerMotif.cs` - Networked Object State
+**Location:** `example code/MRMotifs/SharedActivities/Scripts/Chess Sample/ChessBoardHandlerMotif.cs`
+
+**Purpose:** Syncs positions/rotations of multiple grabbable objects (chess pieces).
+
+**Key Patterns:**
+```csharp
+public class ChessBoardHandlerMotif : NetworkBehaviour, IStateAuthorityChanged
+{
+    [Networked, Capacity(32)]
+    private NetworkArray<Vector3> ChessPiecePositions => default;
+    
+    [Networked, Capacity(32)]
+    private NetworkArray<Quaternion> ChessPieceRotations => default;
+    
+    private List<InteractableUnityEventWrapper> m_chessPieceInteractables = new();
+    
+    // When player grabs a piece, request authority
+    private void TogglePieceMoved(bool isBeingMoved)
+    {
+        if (!Object.HasStateAuthority)
+        {
+            SetChessPieceRigidbodyState(false);  // Disable physics
+            Object.RequestStateAuthority();      // Request network authority
+            return;
+        }
+        // ...
+    }
+    
+    // Authority holder updates networked state
+    private void SendChessPieceOffset()
+    {
+        for (var i = 0; i < m_chessPieceInteractables.Count; i++)
+        {
+            ChessPiecePositions.Set(i, chessPiece.transform.localPosition);
+            ChessPieceRotations.Set(i, chessPiece.transform.localRotation);
+        }
+    }
+    
+    // Non-authority clients lerp to networked positions
+    private void UpdateRemoteChessPieces()
+    {
+        for (var i = 0; i < m_chessPieceInteractables.Count; i++)
+        {
+            if (!HasStateAuthority)
+            {
+                transform.localPosition = Vector3.Lerp(current, target, Time.deltaTime * 10f);
+            }
+        }
+    }
+}
+```
+
+---
+
+## 🎯 Category 4: Passthrough & VR Transitions
+
+### `PassthroughFader.cs` - VR↔MR Fading
+**Location:** `example code/MRMotifs/PassthroughTransitioning/Scripts/PassthroughFader.cs`
+
+**Purpose:** Smooth transition between full VR (skybox) and MR (passthrough).
+
+**Key Patterns:**
+```csharp
+public class PassthroughFader : MonoBehaviour
+{
+    private enum PassthroughViewingMode { Underlay, Selective }
+    private enum FadeDirection { Normal, RightToLeft, TopToBottom, InsideOut }
+    
+    [SerializeField] private PassthroughViewingMode passthroughViewingMode;
+    [SerializeField] private float selectiveDistance = 5f;  // Sphere radius for Selective mode
+    [SerializeField] private float fadeSpeed = 1f;
+    
+    private OVRPassthroughLayer m_oVRPassthroughLayer;
+    private Material m_material;  // Fader sphere material
+    private float m_targetAlpha;
+    
+    private static readonly int s_invertedAlpha = Shader.PropertyToID("_InvertedAlpha");
+    
+    private void Awake()
+    {
+        // Disable premultiplied alpha for proper blending
+        OVRManager.eyeFovPremultipliedAlphaModeEnabled = false;
+        
+        m_oVRPassthroughLayer = FindAnyObjectByType<OVRPassthroughLayer>();
+        m_oVRPassthroughLayer.passthroughLayerResumed.AddListener(OnPassthroughLayerResumed);
+    }
+    
+    public void TogglePassthrough()
+    {
+        if (State == FaderState.MR)
+        {
+            m_targetAlpha = 0;  // Fade to VR
+            onStartFadeOut?.Invoke();
+        }
+        else if (State == FaderState.VR)
+        {
+            m_oVRPassthroughLayer.enabled = true;
+            onStartFadeIn?.Invoke();
+        }
+        StartCoroutine(FadeToTarget());
+    }
+    
+    private IEnumerator FadeToTarget()
+    {
+        var currentAlpha = m_material.GetFloat(s_invertedAlpha);
+        while (Mathf.Abs(currentAlpha - m_targetAlpha) > 0.001f)
+        {
+            currentAlpha = Mathf.MoveTowards(currentAlpha, m_targetAlpha, fadeSpeed * Time.deltaTime);
+            m_material.SetFloat(s_invertedAlpha, currentAlpha);
+            yield return null;
+        }
+        
+        if (m_targetAlpha == 0)
+            m_oVRPassthroughLayer.enabled = false;  // Disable when fully VR
+    }
+}
+```
+
+**Two Viewing Modes:**
+- **Underlay:** Entire view fades (camera background changes)
+- **Selective:** Sphere around player shows passthrough, outside is VR
+
+---
+
+## 🎯 Category 5: Surface Detection & Placement
+
+### `SurfacePlacementMotif.cs` - Snap to Real Surfaces
+**Location:** `example code/MRMotifs/InstantContentPlacement/Scripts/Instant Content Placement/SurfacePlacementMotif.cs`
+
+**Purpose:** Places virtual objects on detected real-world surfaces using Depth API.
+
+**Key Patterns:**
+```csharp
+public class SurfacePlacementMotif : MonoBehaviour
+{
+    [SerializeField] private InteractableUnityEventWrapper interactableUnityEventWrapper;
+    [SerializeField] private float placementDistance = 0.4f;
+    [SerializeField] private float hoverDistance = 0.1f;
+    
+    private EnvironmentRaycastManager m_raycastManager;  // From MRUK
+    
+    private void Awake()
+    {
+        m_raycastManager = FindAnyObjectByType<EnvironmentRaycastManager>();
+        
+        interactableUnityEventWrapper.WhenSelect.AddListener(OnSelect);
+        interactableUnityEventWrapper.WhenUnselect.AddListener(OnUnselect);
+    }
+    
+    private void OnUnselect()
+    {
+        // When released, try to snap to surface
+        if (!PerformRaycastAndSnap())
+        {
+            // No surface found, stay where dropped
+            m_targetPosition = transform.position;
+        }
+    }
+    
+    private bool PerformRaycastAndSnap()
+    {
+        // Raycast downward to find surface
+        if (!m_raycastManager.Raycast(new Ray(transform.position, Vector3.down), out var hitInfo))
+            return false;
+            
+        var hitPoint = hitInfo.point;
+        
+        // Check if within snap distance
+        if (Vector3.Distance(transform.position, hitPoint) >= placementDistance)
+            return false;
+            
+        // Set target position (slightly above surface)
+        m_targetPosition = new Vector3(hitPoint.x, hitPoint.y + hoverDistance, hitPoint.z);
+        m_targetRotation = Quaternion.Euler(0, transform.rotation.eulerAngles.y, 0);
+        
+        StartCoroutine(SmoothMoveToTarget());
+        return true;
+    }
+}
+```
+
+**Requires:** `EnvironmentRaycastManager` component in scene (from MRUK).
+
+---
+
+## 🎯 Category 6: Networked Drawing (RPC Pattern)
+
+### `WhiteboardManagerMotif.cs` - RPC for Real-time Sync
+**Location:** `example code/MRMotifs/ColocatedExperiences/Scripts/Whiteboard/WhiteboardManagerMotif.cs`
+
+**Purpose:** Demonstrates RPC pattern for immediate visual feedback across all clients.
+
+**Key Patterns:**
+```csharp
+public class WhiteboardManagerMotif : NetworkBehaviour
+{
+    public Texture2D whiteboardTexture;
+    
+    public static WhiteboardManagerMotif Instance { get; private set; }
+    
+    public override void Spawned()
+    {
+        Instance = this;
+        
+        // Create texture
+        whiteboardTexture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+        
+        // New clients request snapshot of current state
+        if (!Object.HasStateAuthority)
+            RPC_RequestSnapshot();
+    }
+    
+    /// <summary>
+    /// RPC to ALL clients for immediate drawing feedback.
+    /// </summary>
+    [Rpc(RpcSources.All, RpcTargets.All)]
+    public void RPC_DrawLine(Vector2 startUV, Vector2 endUV, Color color, int brushRadius)
+    {
+        DrawLine(startUV, endUV, color, brushRadius);  // Draw locally on all clients
+    }
+}
+```
+
+**RPC Types Used:**
+- `RpcTargets.All` - Send to everyone for immediate visual feedback
+- `RpcTargets.StateAuthority` - Send to host for authoritative state
+
+### `PointerDrawingMotif.cs` - Using the Whiteboard
+**Location:** `example code/MRMotifs/ColocatedExperiences/Scripts/Whiteboard/PointerDrawingMotif.cs`
+
+```csharp
+private void HandlePointerDrawing(...)
+{
+    if (inputDown && InteractionStateManagerMotif.Instance.CanDrawWithPointer())
+    {
+        Object.RequestStateAuthority();  // Request authority before drawing
+        InteractionStateManagerMotif.Instance.SetMode(mode);
+        isDrawing = true;
+        lastUV = m_whiteboardManagerMotif.WorldToUV(hitPoint);
+        m_whiteboardManagerMotif.RPC_DrawLine(lastUV, lastUV, penColor, brushRadius);
+    }
+    else if (inputHeld && isDrawing)
+    {
+        var currentUV = m_whiteboardManagerMotif.WorldToUV(hitPoint);
+        m_whiteboardManagerMotif.RPC_DrawLine(lastUV, currentUV, penColor, brushRadius);
+        lastUV = currentUV;
+    }
+}
+```
+
+---
+
+## 🎯 Quick Reference: Which Script to Copy
+
+| Your Need | Example Script | Key Pattern |
+|-----------|---------------|-------------|
+| **Spawn bullets** | `BallSpawnerMotif.cs` | `Runner.Spawn()` + `Rigidbody.AddForce()` |
+| **Bullet hit detection** | `BouncingBallMotif.cs` | `OnCollisionEnter()` |
+| **Align players** | `ColocationManager.cs` | `InverseTransformPoint()` on camera rig |
+| **Share spatial anchor** | `SharedSpatialAnchorManager.cs` | `OVRSpatialAnchor.ShareAsync()` |
+| **Share room mesh** | `SpaceSharingManager.cs` | `MRUK.ShareRoomsAsync()` |
+| **Sync avatar positions** | `AvatarMovementHandlerMotif.cs` | `[Networked] NetworkArray` |
+| **Sync grabbable objects** | `ChessBoardHandlerMotif.cs` | `RequestStateAuthority()` on grab |
+| **VR↔MR fade** | `PassthroughFader.cs` | Shader alpha + `OVRPassthroughLayer` |
+| **Snap to surfaces** | `SurfacePlacementMotif.cs` | `EnvironmentRaycastManager.Raycast()` |
+| **Real-time visual sync** | `WhiteboardManagerMotif.cs` | `[Rpc(RpcTargets.All)]` |
+
+---
+
+## 🔧 Implementation Checklist for Shooting Arena
+
+Based on the example code, here's what your shooting arena needs:
+
+### 1. Colocation Setup
+- [ ] Copy `ColocationManager.cs` → `Assets/Scripts/Colocation/`
+- [ ] Copy `SharedSpatialAnchorManager.cs` → `Assets/Scripts/Colocation/`
+- [ ] Copy `SpaceSharingManager.cs` → `Assets/Scripts/Colocation/`
+
+### 2. Bullet System
+- [ ] Create `BulletSpawner.cs` based on `BallSpawnerMotif.cs`
+- [ ] Create `Bullet.cs` based on `BouncingBallMotif.cs` with hit detection
+- [ ] Create bullet prefab with `NetworkObject`, `Rigidbody`, `Collider`
+
+### 3. Player Sync
+- [ ] Adapt `AvatarMovementHandlerMotif.cs` for player positions
+- [ ] Or use simpler `NetworkTransform` if not using object-relative positions
+
+### 4. Hit Detection
+- [ ] Add scoring system
+- [ ] Sync hits via RPC (like `WhiteboardManagerMotif.RPC_DrawLine`)
+
+### 5. Room Physics
+- [ ] Ensure `MRUK.LoadSceneFromDevice()` on host
+- [ ] Ensure `MRUK.LoadSceneFromSharedRooms()` on client
+- [ ] Bullets should collide with room walls

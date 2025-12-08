@@ -20,7 +20,6 @@ namespace MRMotifs.SharedActivities.Network
     {
         [Header("Host Migration Settings")]
         [SerializeField] private bool m_enableHostMigration = true;
-        [SerializeField] private float m_migrationTimeout = 10f;
         
         [Header("References")]
         [SerializeField] private NetworkRunner m_runnerPrefab;

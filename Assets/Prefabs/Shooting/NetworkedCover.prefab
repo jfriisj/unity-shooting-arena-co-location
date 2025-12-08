@@ -66,5 +66,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_size: {x: 1, y: 1.5, z: 0.3}
   m_coverColor: {r: 0.3, g: 0.3, b: 0.35, a: 0.8}
+  m_materialSmoothness: 0.2
+  m_interpolationSpeed: 10
   _NetworkedPosition: {x: 0, y: 0, z: 0}
   _NetworkedRotation: {x: 0, y: 0, z: 0, w: 0}
