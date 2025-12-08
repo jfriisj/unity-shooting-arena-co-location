@@ -332,12 +332,31 @@ namespace MRMotifs.ColocatedExperiences.Colocation
                     unboundAnchor.BindTo(spatialAnchor);
 
                     m_colocationManager.AlignUserToAnchor(spatialAnchor);
+                    
+                    // Set up recenter handling after alignment
+                    SetupRecenterHandling();
+                    
                     Debug.Log($"Motif: Colocation complete. Calibration error: {m_colocationManager.GetCurrentCalibrationError():F2}mm");
                     return;
                 }
 
                 Debug.LogWarning($"Motif: Failed to localize anchor: {unboundAnchor.Uuid}");
             }
+        }
+
+        /// <summary>
+        /// Sets up automatic recenter handling to maintain alignment when user recenters HMD.
+        /// </summary>
+        private void SetupRecenterHandling()
+        {
+            var recenterManager = gameObject.GetComponent<AlignCameraToAnchorManager>();
+            if (recenterManager == null)
+            {
+                recenterManager = gameObject.AddComponent<AlignCameraToAnchorManager>();
+            }
+            
+            recenterManager.ColocationManager = m_colocationManager;
+            Debug.Log("Motif: Recenter handling enabled");
         }
     }
 }

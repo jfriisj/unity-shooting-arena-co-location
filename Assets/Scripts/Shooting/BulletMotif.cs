@@ -5,6 +5,7 @@ using Fusion;
 using UnityEngine;
 using System.Collections;
 using Meta.XR.Samples;
+using MRMotifs.Shared;
 
 namespace MRMotifs.SharedActivities.ShootingSample
 {
@@ -90,23 +91,11 @@ namespace MRMotifs.SharedActivities.ShootingSample
             // Apply static config
             if (ConfigDamage > 0) m_damage = ConfigDamage;
 
-            // Load hit sound from Resources if not assigned
-            if (m_hitSound == null)
-            {
-                m_hitSound = Resources.Load<AudioClip>("Audio/Hit");
-            }
-
-            // Load bullet hole prefab from Resources if not assigned
-            if (m_hitEffectPrefab == null)
-            {
-                m_hitEffectPrefab = Resources.Load<GameObject>("BulletHole");
-            }
-
-            // Load player hit effect (blood) from Resources if not assigned
-            if (m_playerHitEffectPrefab == null)
-            {
-                m_playerHitEffectPrefab = Resources.Load<GameObject>("BloodEffect");
-            }
+            // Require serialized fields - no Resources.Load fallbacks
+            // These must be assigned in the bullet prefab Inspector
+            DebugLogger.RequireSerializedField(m_hitEffectPrefab, "m_hitEffectPrefab (BulletHole)", this);
+            DebugLogger.RequireSerializedField(m_playerHitEffectPrefab, "m_playerHitEffectPrefab (BloodEffect)", this);
+            DebugLogger.RequireSerializedField(m_hitSound, "m_hitSound", this);
         }
 
         public override void Spawned()
@@ -116,8 +105,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
             HasHit = false;
             m_previousPosition = transform.position;
             
-            // Debug log on spawn
-            Debug.Log($"[BulletMotif] Spawned at {transform.position}, wallLayers mask: {m_wallLayers.value}");
+            DebugLogger.Bullet($"Spawned | pos={transform.position:F2} vel={NetworkedVelocity:F1} owner={OwnerPlayer} lifetime={m_lifetime:F1}s", this);
 
             // Apply velocity if we're the authority
             if (Object.HasStateAuthority && NetworkedVelocity != Vector3.zero)
@@ -234,16 +222,16 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 
                 if (hitPlayer)
                 {
-                    Debug.Log($"[BulletMotif] Raycast hit player! Dealing {m_damage} damage");
+                    DebugLogger.Bullet($"HIT PLAYER (raycast) | damage={m_damage} target={hit.collider.gameObject.name} attacker={OwnerPlayer}", this);
                     playerHealth.ApplyDamageLocal(m_damage, OwnerPlayer);
                 }
                 else if (IsWallCollision(hit.collider.gameObject))
                 {
-                    Debug.Log($"[BulletMotif] Raycast hit wall: {hit.collider.gameObject.name}");
+                    DebugLogger.Bullet($"Hit wall (raycast) | object={hit.collider.gameObject.name} layer={LayerMask.LayerToName(hit.collider.gameObject.layer)}", this);
                 }
                 else
                 {
-                    Debug.Log($"[BulletMotif] Raycast hit environment: {hit.collider.gameObject.name}");
+                    DebugLogger.Bullet($"Hit environment (raycast) | object={hit.collider.gameObject.name}", this);
                 }
 
                 SpawnHitEffectRpc(hit.point, hit.normal, hitPlayer, false);
@@ -282,7 +270,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
             }
 
             // Check if we hit a player
-            var playerHealth = collision.gameObject.GetComponentInParent<PlayerHealthMotif>();
+            var damageable = collision.gameObject.GetComponentInParent<IDamageable>();
             var networkObject = collision.gameObject.GetComponentInParent<NetworkObject>();
 
             // Check if we hit our own avatar
@@ -292,12 +280,13 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 isOwnAvatar = true;
             }
 
-            if (playerHealth != null)
+            if (damageable != null)
             {
                 // Don't damage ourselves
-                if (playerHealth.OwnerPlayer != OwnerPlayer && !isOwnAvatar)
+                var playerHealth = damageable as PlayerHealthMotif;
+                if (playerHealth == null || (playerHealth.OwnerPlayer != OwnerPlayer && !isOwnAvatar))
                 {
-                    HandleAvatarImpact(impactPoint, impactNormal, playerHealth);
+                    HandleAvatarImpact(impactPoint, impactNormal, damageable);
                     return;
                 }
                 else
@@ -328,7 +317,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
             
             if (hasTag || hasLayer)
             {
-                Debug.Log($"[BulletMotif] Wall collision detected: {obj.name}, tag={obj.tag}, layer={obj.layer} ({LayerMask.LayerToName(obj.layer)}), hasTag={hasTag}, hasLayer={hasLayer}");
+                DebugLogger.Bullet($"Wall detected | object={obj.name} tag={obj.tag} layer={LayerMask.LayerToName(obj.layer)}", this);
             }
             
             return hasTag || hasLayer;
@@ -393,12 +382,12 @@ namespace MRMotifs.SharedActivities.ShootingSample
         /// <summary>
         /// Handle avatar/player impact.
         /// </summary>
-        private void HandleAvatarImpact(Vector3 point, Vector3 normal, PlayerHealthMotif playerHealth)
+        private void HandleAvatarImpact(Vector3 point, Vector3 normal, IDamageable damageable)
         {
             HasHit = true;
             
-            // Apply damage directly (local) since PlayerHealthMotif may not have working RPCs
-            playerHealth.ApplyDamageLocal(m_damage, OwnerPlayer);
+            // Apply damage through IDamageable interface
+            damageable.TakeDamage(m_damage, point, normal);
             
             // Spawn player hit effect
             SpawnHitEffectRpc(point, normal, true, false);
@@ -423,7 +412,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 return;
             }
             
-            Debug.Log($"[BulletMotif] OnTriggerEnter - other: {other.gameObject.name}, HasStateAuthority: {Object.HasStateAuthority}, HasHit: {HasHit}");
+            DebugLogger.Bullet($"Trigger | object={other.gameObject.name} auth={Object.HasStateAuthority} hasHit={HasHit}", this);
 
             if (!Object.HasStateAuthority || HasHit)
             {
@@ -434,7 +423,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
             var playerHealth = other.GetComponentInParent<PlayerHealthMotif>();
             var networkObject = other.GetComponentInParent<NetworkObject>();
             
-            Debug.Log($"[BulletMotif] PlayerHealth found: {playerHealth != null}, NetworkObject found: {networkObject != null}");
+            DebugLogger.Bullet($"Trigger check | playerHealth={playerHealth != null} networkObj={networkObject != null}", this);
             
             bool hitPlayer = false;
             bool isOwnAvatar = false;
@@ -442,7 +431,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
             // Determine if this is the bullet owner's own avatar
             if (networkObject != null)
             {
-                Debug.Log($"[BulletMotif] NetworkObject.InputAuthority: {networkObject.InputAuthority}, isOwnAvatar: {isOwnAvatar}");
+                DebugLogger.Bullet($"Owner check | inputAuth={networkObject.InputAuthority} bulletOwner={OwnerPlayer}", this);
                 
                 // Better check: compare input authority with bullet owner
                 if (networkObject.InputAuthority == OwnerPlayer)
@@ -453,17 +442,17 @@ namespace MRMotifs.SharedActivities.ShootingSample
             
             if (playerHealth != null)
             {
-                Debug.Log($"[BulletMotif] PlayerHealth.OwnerPlayer: {playerHealth.OwnerPlayer}, Bullet.OwnerPlayer: {OwnerPlayer}");
+                DebugLogger.Bullet($"Player check | healthOwner={playerHealth.OwnerPlayer} bulletOwner={OwnerPlayer} isOwn={isOwnAvatar}", this);
                 
                 // Use both checks - OwnerPlayer or InputAuthority
                 if (playerHealth.OwnerPlayer == OwnerPlayer || isOwnAvatar)
                 {
                     // Hit our own collider - ignore and continue
-                    Debug.Log($"[BulletMotif] Hit own avatar, ignoring");
+                    DebugLogger.Bullet("Ignored own avatar", this);
                     return;
                 }
                 
-                Debug.Log($"[BulletMotif] Dealing damage to player!");
+                DebugLogger.Bullet($"HIT PLAYER (trigger) | damage={m_damage} attacker={OwnerPlayer}", this);
                 // Apply damage directly (local) since PlayerHealthMotif may not have working RPCs
                 playerHealth.ApplyDamageLocal(m_damage, OwnerPlayer);
                 hitPlayer = true;
@@ -471,14 +460,14 @@ namespace MRMotifs.SharedActivities.ShootingSample
             else if (isOwnAvatar)
             {
                 // Hit own avatar but no PlayerHealth found - still ignore
-                Debug.Log($"[BulletMotif] Hit own avatar (no PlayerHealth), ignoring");
+                DebugLogger.Bullet("Ignored own avatar (no health component)", this);
                 return;
             }
 
             HasHit = true;
 
             // Spawn hit effect and despawn
-            Debug.Log($"[BulletMotif] Spawning hit effect, hitPlayer: {hitPlayer}");
+            DebugLogger.Bullet($"Despawning | hitPlayer={hitPlayer}", this);
             SpawnHitEffectRpc(transform.position, -transform.forward, hitPlayer, false);
             DespawnBullet();
         }

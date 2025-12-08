@@ -57,8 +57,8 @@ namespace MRMotifs.SharedActivities.ShootingSample
         public int bulletDamage = 10;
 
         [Tooltip("Bullet travel speed.")]
-        [Range(5, 50)]
-        public float bulletSpeed = 15f;
+        [Range(5, 200)]
+        public float bulletSpeed = 60f;
 
         [Tooltip("Time between shots (fire rate).")]
         [Range(0.05f, 1f)]
@@ -112,8 +112,8 @@ namespace MRMotifs.SharedActivities.ShootingSample
                     maxHealth = 100;
                     respawnDelay = 3f;
                     bulletDamage = 10;
-                    bulletSpeed = 15f;
-                    fireRate = 0.2f;
+                    bulletSpeed = 60f;
+                    fireRate = 0.1f;
                     break;
 
                 case GamePreset.QuickMatch:
@@ -123,7 +123,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
                     maxHealth = 50;
                     respawnDelay = 1f;
                     bulletDamage = 25;
-                    bulletSpeed = 25f;
+                    bulletSpeed = 80f;
                     fireRate = 0.1f;
                     break;
 
@@ -134,7 +134,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
                     maxHealth = 200;
                     respawnDelay = 5f;
                     bulletDamage = 10;
-                    bulletSpeed = 15f;
+                    bulletSpeed = 60f;
                     fireRate = 0.25f;
                     break;
 
@@ -145,7 +145,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
                     maxHealth = 1;
                     respawnDelay = 2f;
                     bulletDamage = 100;
-                    bulletSpeed = 30f;
+                    bulletSpeed = 100f;
                     fireRate = 0.5f;
                     break;
 
@@ -156,7 +156,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
                     maxHealth = 100;
                     respawnDelay = 1f;
                     bulletDamage = 10;
-                    bulletSpeed = 15f;
+                    bulletSpeed = 60f;
                     fireRate = 0.1f;
                     break;
             }

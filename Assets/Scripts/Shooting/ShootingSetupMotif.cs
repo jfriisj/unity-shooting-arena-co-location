@@ -145,8 +145,26 @@ namespace MRMotifs.SharedActivities.ShootingSample
             // Configure weapon visuals
             if (m_weaponPrefab != null)
             {
+                // Check if ShootingPlayerMotif already has a weapon prefab assigned to avoid duplication
+                // If it does, we assume it handles spawning itself.
+                // However, ShootingPlayerMotif.SpawnWeaponModels() is called in Start(), 
+                // and we are configuring it here potentially after Start() or before.
+                // To be safe, we only configure if it doesn't have one, OR we rely on ShootingPlayerMotif's logic
+                // to clear existing weapons before spawning new ones.
+                
+                // Actually, ShootingPlayerMotif.SpawnWeaponModels() is called in its Start().
+                // If we add the component here, Start() runs immediately after.
+                // If the component was already there, Start() already ran.
+                
+                // Let's just set the config. ShootingPlayerMotif.RespawnWeaponModels() handles cleanup.
                 shootingPlayer.ConfigureWeapon(m_weaponPrefab, m_weaponPositionOffset, m_weaponRotationOffset, m_weaponScale);
-                shootingPlayer.RespawnWeaponModels();
+                
+                // Only call Respawn if the component was already active (Start ran)
+                // If we just added it, Start() will pick up the new config.
+                if (shootingPlayer.gameObject.activeInHierarchy)
+                {
+                     shootingPlayer.RespawnWeaponModels();
+                }
             }
 
             Debug.Log("[ShootingSetupMotif] Local player shooting setup complete");

@@ -6,15 +6,17 @@ using UnityEngine;
 using System;
 using System.Collections;
 using Meta.XR.Samples;
+using MRMotifs.Shared;
 
 namespace MRMotifs.SharedActivities.ShootingSample
 {
     /// <summary>
     /// Manages player health, death, and respawn in the shooting game.
     /// Synchronizes health state across networked clients and handles scoring.
+    /// Implements IDamageable interface for uniform damage handling.
     /// </summary>
     [MetaCodeSample("MRMotifs-SharedActivities")]
-    public class PlayerHealthMotif : NetworkBehaviour
+    public class PlayerHealthMotif : NetworkBehaviour, IDamageable
     {
         // Static configuration from ShootingGameConfigMotif
         public static int ConfigMaxHealth = 100;
@@ -77,16 +79,31 @@ namespace MRMotifs.SharedActivities.ShootingSample
         public PlayerRef OwnerPlayer { get; set; }
 
         /// <summary>
-        /// Number of kills this player has.
+        /// Reference to player statistics component.
         /// </summary>
-        [Networked, OnChangedRender(nameof(OnScoreChanged))]
-        public int Kills { get; set; }
+        public PlayerStatsMotif PlayerStats { get; private set; }
 
         /// <summary>
-        /// Number of deaths this player has.
+        /// Number of kills this player has (for backwards compatibility).
+        /// Use PlayerStats.Kills instead.
         /// </summary>
         [Networked, OnChangedRender(nameof(OnScoreChanged))]
-        public int Deaths { get; set; }
+        public int Kills 
+        { 
+            get => PlayerStats != null ? PlayerStats.Kills : 0;
+            set { if (PlayerStats != null) PlayerStats.Kills = value; }
+        }
+
+        /// <summary>
+        /// Number of deaths this player has (for backwards compatibility).
+        /// Use PlayerStats.Deaths instead.
+        /// </summary>
+        [Networked, OnChangedRender(nameof(OnScoreChanged))]
+        public int Deaths 
+        { 
+            get => PlayerStats != null ? PlayerStats.Deaths : 0;
+            set { if (PlayerStats != null) PlayerStats.Deaths = value; }
+        }
 
         /// <summary>
         /// Event fired when health changes. Parameters: currentHealth, maxHealth
@@ -112,35 +129,42 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private AudioSource m_audioSource;
         private Transform m_spawnPoint;
 
-        // Local state for when Networked properties don't work (dynamic AddComponent)
-        private int m_currentHealthLocal;
-        private bool m_isDeadLocal;
-        private bool m_isInvulnerableLocal;
-        private int m_killsLocal;
-        private int m_deathsLocal;
+        // Health state - uses local tracking because this component is added via AddComponent
+        // at runtime, so Fusion's [Networked] properties don't work. This is intentional.
+        private int m_currentHealth;
+        private bool m_isDead;
+        private bool m_isInvulnerable;
         private NetworkObject m_networkObject;
 
         /// <summary>
-        /// Get current health (local fallback if networked doesn't work)
+        /// Get current health.
         /// </summary>
-        public int GetCurrentHealth() => m_currentHealthLocal;
+        public int GetCurrentHealth() => m_currentHealth;
         
         /// <summary>
-        /// Check if player is dead (local fallback)
+        /// Check if player is dead.
         /// </summary>
-        public bool IsDeadLocal => m_isDeadLocal;
+        public bool IsDeadLocal => m_isDead;
 
         private void Awake()
         {
-            // Initialize local health state
-            m_currentHealthLocal = m_maxHealth;
-            m_isDeadLocal = false;
-            m_isInvulnerableLocal = false;
-            m_killsLocal = 0;
-            m_deathsLocal = 0;
+            // Initialize health state
+            m_currentHealth = m_maxHealth;
+            m_isDead = false;
+            m_isInvulnerable = false;
 
-            // Try to get NetworkObject for owner detection
+            // Get or add PlayerStats component
+            PlayerStats = GetComponent<PlayerStatsMotif>();
+            if (PlayerStats == null)
+            {
+                PlayerStats = gameObject.AddComponent<PlayerStatsMotif>();
+                DebugLogger.Health("PlayerStats component added", this);
+            }
+
+            // Get NetworkObject for owner detection
             m_networkObject = GetComponentInParent<NetworkObject>();
+            
+            DebugLogger.Health($"Awake | maxHealth={m_maxHealth} networkObject={(m_networkObject != null ? "found" : "NOT FOUND")}", this);
         }
 
         public override void Spawned()
@@ -153,9 +177,9 @@ namespace MRMotifs.SharedActivities.ShootingSample
             if (ConfigInvulnerabilityDuration >= 0) m_invulnerabilityDuration = ConfigInvulnerabilityDuration;
 
             // Initialize local health state with config
-            m_currentHealthLocal = m_maxHealth;
-            m_isDeadLocal = false;
-            m_isInvulnerableLocal = false;
+            m_currentHealth = m_maxHealth;
+            m_isDead = false;
+            m_isInvulnerable = false;
 
             if (Object.HasStateAuthority)
             {
@@ -168,15 +192,13 @@ namespace MRMotifs.SharedActivities.ShootingSample
             }
 
             // Fire initial health event
-            OnHealthUpdated?.Invoke(m_currentHealthLocal, m_maxHealth);
+            OnHealthUpdated?.Invoke(m_currentHealth, m_maxHealth);
 
-            Debug.Log($"[PlayerHealthMotif] Spawned - maxHealth: {m_maxHealth}, currentHealth: {m_currentHealthLocal}");
+            DebugLogger.Health($"Spawned | maxHealth={m_maxHealth} currentHealth={m_currentHealth} hasAuthority={Object.HasStateAuthority}", this);
 
             // Cache original color for flash effect
-            if (m_playerRenderer != null)
-            {
-                m_originalColor = m_playerRenderer.material.color;
-            }
+            DebugLogger.RequireSerializedField(m_playerRenderer, "m_playerRenderer", this);
+            m_originalColor = m_playerRenderer.material.color;
 
             // Get or add audio source
             m_audioSource = GetComponent<AudioSource>();
@@ -185,19 +207,10 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 m_audioSource = gameObject.AddComponent<AudioSource>();
             }
 
-            // Load audio clips from Resources if not assigned
-            if (m_hitSound == null)
-            {
-                m_hitSound = Resources.Load<AudioClip>("Audio/Hit");
-            }
-            if (m_deathSound == null)
-            {
-                m_deathSound = Resources.Load<AudioClip>("Audio/Death");
-            }
-            if (m_respawnSound == null)
-            {
-                m_respawnSound = Resources.Load<AudioClip>("Audio/Respawn");
-            }
+            // Require audio clips - must be assigned in inspector
+            DebugLogger.RequireSerializedField(m_hitSound, "m_hitSound", this);
+            DebugLogger.RequireSerializedField(m_deathSound, "m_deathSound", this);
+            DebugLogger.RequireSerializedField(m_respawnSound, "m_respawnSound", this);
         }
 
         /// <summary>
@@ -206,27 +219,70 @@ namespace MRMotifs.SharedActivities.ShootingSample
         /// </summary>
         public void ApplyDamageLocal(int damage, PlayerRef attacker)
         {
-            Debug.Log($"[PlayerHealthMotif] ApplyDamageLocal - damage: {damage}, attacker: {attacker}, currentHealth: {m_currentHealthLocal}");
+            DebugLogger.Health($"Damage | amount={damage} attacker={attacker} health={m_currentHealth}/{m_maxHealth}", this);
             
-            if (m_isDeadLocal || m_isInvulnerableLocal)
+            if (m_isDead || m_isInvulnerable)
             {
-                Debug.Log($"[PlayerHealthMotif] Ignoring damage - dead: {m_isDeadLocal}, invulnerable: {m_isInvulnerableLocal}");
+                DebugLogger.Health($"Damage ignored | dead={m_isDead} invulnerable={m_isInvulnerable}", this);
                 return;
             }
 
-            m_currentHealthLocal = Mathf.Max(0, m_currentHealthLocal - damage);
+            m_currentHealth = Mathf.Max(0, m_currentHealth - damage);
             
             // Fire health updated event
-            OnHealthUpdated?.Invoke(m_currentHealthLocal, m_maxHealth);
+            OnHealthUpdated?.Invoke(m_currentHealth, m_maxHealth);
 
             // Play hit effects locally
             PlayHitEffects();
 
-            if (m_currentHealthLocal <= 0)
+            if (m_currentHealth <= 0)
             {
                 DieLocal(attacker);
             }
         }
+
+        #region IDamageable Implementation
+
+        /// <summary>
+        /// IDamageable interface implementation - applies damage to this player.
+        /// </summary>
+        public void TakeDamage(float damage, Vector3 position, Vector3 normal, IDamageable.DamageCallback callback = null)
+        {
+            ApplyDamageLocal((int)damage, PlayerRef.None);
+            
+            // Record damage taken
+            if (PlayerStats != null)
+            {
+                PlayerStats.RecordDamageTaken(damage);
+            }
+            
+            // Invoke callback if provided
+            callback?.Invoke(this, damage, m_isDead);
+        }
+
+        /// <summary>
+        /// IDamageable interface implementation - heals this player.
+        /// </summary>
+        public void Heal(float healing, IDamageable.DamageCallback callback = null)
+        {
+            if (m_isDead) return;
+            
+            m_currentHealth = Mathf.Min(m_maxHealth, m_currentHealth + (int)healing);
+            OnHealthUpdated?.Invoke(m_currentHealth, m_maxHealth);
+            
+            // Record healing
+            if (PlayerStats != null)
+            {
+                PlayerStats.RecordHealing(healing);
+            }
+            
+            DebugLogger.Health($"Healed | amount={healing} health={m_currentHealth}/{m_maxHealth}", this);
+            
+            // Invoke callback if provided
+            callback?.Invoke(this, healing, false);
+        }
+
+        #endregion
 
         private void PlayHitEffects()
         {
@@ -245,9 +301,9 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
         private void DieLocal(PlayerRef killer)
         {
-            Debug.Log($"[PlayerHealthMotif] DieLocal - killed by: {killer}");
-            m_isDeadLocal = true;
-            m_deathsLocal++;
+            DebugLogger.Health($"DEATH | killer={killer} deaths={PlayerStats.Deaths}", this);
+            m_isDead = true;
+            PlayerStats.AddDeath();
 
             // Play death sound
             if (m_audioSource != null && m_deathSound != null)
@@ -257,7 +313,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
             // Fire death event
             OnPlayerDied?.Invoke(killer);
-            OnScoreUpdated?.Invoke(m_killsLocal, m_deathsLocal);
+            OnScoreUpdated?.Invoke(PlayerStats.Kills, PlayerStats.Deaths);
 
             // Start respawn timer
             StartCoroutine(RespawnAfterDelayLocal());
@@ -267,17 +323,17 @@ namespace MRMotifs.SharedActivities.ShootingSample
         {
             yield return new WaitForSeconds(m_respawnDelay);
 
-            m_currentHealthLocal = m_maxHealth;
-            m_isDeadLocal = false;
-            m_isInvulnerableLocal = true;
+            m_currentHealth = m_maxHealth;
+            m_isDead = false;
+            m_isInvulnerable = true;
 
             // Fire respawn event
             OnPlayerRespawned?.Invoke();
-            OnHealthUpdated?.Invoke(m_currentHealthLocal, m_maxHealth);
+            OnHealthUpdated?.Invoke(m_currentHealth, m_maxHealth);
 
             // Invulnerability period
             yield return new WaitForSeconds(m_invulnerabilityDuration);
-            m_isInvulnerableLocal = false;
+            m_isInvulnerable = false;
         }
 
         /// <summary>
@@ -467,6 +523,8 @@ namespace MRMotifs.SharedActivities.ShootingSample
         /// </summary>
         public void ResetStats()
         {
+            if (Object == null || !Object.IsValid) return;
+
             if (Object.HasStateAuthority)
             {
                 Kills = 0;

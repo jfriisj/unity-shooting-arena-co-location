@@ -21,6 +21,69 @@ applyTo: '**'
 ## Project Overview
 Unity 6 Mixed Reality sample project demonstrating Meta Quest MR features using URP and OpenXR. Contains 4 independent "motifs" (reusable MR patterns) under `Assets/MRMotifs/`.
 
+## ✅ Implemented Discover Patterns
+
+This project has adopted key patterns from Meta's Discover sample:
+
+### 1. IDamageable Interface (`Assets/Scripts/Shared/IDamageable.cs`)
+Clean damage abstraction allowing any object to take damage uniformly.
+
+```csharp
+public interface IDamageable
+{
+    void TakeDamage(float damage, Vector3 position, Vector3 normal, DamageCallback callback = null);
+    void Heal(float healing, DamageCallback callback = null);
+    public delegate void DamageCallback(IDamageable affected, float amount, bool died);
+}
+```
+
+**Usage:** `PlayerHealthMotif` implements `IDamageable`. `BulletMotif` uses `GetComponent<IDamageable>()` instead of specific types.
+
+### 2. PhotonNetworkHelpers (`Assets/Scripts/Network/PhotonNetworkHelpers.cs`)
+Utility extensions for common Photon Fusion patterns.
+
+```csharp
+// Check if master client
+if (PhotonNetworkHelpers.Runner.IsMasterClient()) { }
+
+// Get camera rig
+var cameraRig = PhotonNetworkHelpers.CameraRig;
+
+// Despawn object
+networkObject.Despawn();
+
+// Check if local player
+if (playerRef.IsLocal()) { }
+```
+
+### 3. AlignCameraToAnchorManager (`Assets/Scripts/Colocation/AlignCameraToAnchorManager.cs`)
+Handles HMD recenter events to maintain colocation alignment.
+
+**Key Feature:** Automatically realigns camera to spatial anchor when user recenters HMD (holds Oculus button) or remounts headset.
+
+**Integration:** Auto-added by `SharedSpatialAnchorManager` after colocation completes.
+
+### 4. PlayerStatsMotif (`Assets/Scripts/Shooting/PlayerStatsMotif.cs`)
+Separate stats tracking following single responsibility principle.
+
+```csharp
+public class PlayerStatsMotif : NetworkBehaviour
+{
+    [Networked] public int Kills { get; set; }
+    [Networked] public int Deaths { get; set; }
+    [Networked] public int ShotsFired { get; set; }
+    [Networked] public int ShotsHit { get; set; }
+    [Networked] public float DamageDealt { get; set; }
+    [Networked] public float DamageTaken { get; set; }
+    
+    public float Accuracy => ShotsFired > 0 ? (float)ShotsHit / ShotsFired : 0f;
+}
+```
+
+**Usage:** `PlayerHealthMotif` automatically adds `PlayerStatsMotif` component. Access via `PlayerHealth.PlayerStats.Kills`.
+
+---
+
 ## AI-Assisted Unity Development (Unity MCP)
 
 This project integrates the **AI Game Developer (Unity-MCP)** tool for direct AI manipulation of Unity Editor. When making changes to GameObjects, scenes, prefabs, or components, prefer using Unity MCP tools over generating code files.
@@ -36,6 +99,12 @@ This project integrates the **AI Game Developer (Unity-MCP)** tool for direct AI
 ## Meta Quest Developer Hub MCP (HzOSDevMCP)
 
 This project also integrates **HzOSDevMCP** for Meta Quest device management and documentation access directly from the AI assistant.
+
+### Device ID
+"C:\Users\jonfriis\Android\Sdk\platform-tools\adb.exe" devices
+List of devices attached
+2G0YC1ZF8B07WD  device
+2G0YC5ZF9F00N1  device
 
 ### Key HzOSDevMCP Tools Available
 - **Documentation**: 
@@ -878,3 +947,543 @@ Based on the example code, here's what your shooting arena needs:
 - [ ] Ensure `MRUK.LoadSceneFromDevice()` on host
 - [ ] Ensure `MRUK.LoadSceneFromSharedRooms()` on client
 - [ ] Bullets should collide with room walls
+
+---
+
+# 📚 Discover Example Code Reference Guide
+
+The `example code/Discover/` folder contains Meta's official **Discover** sample project with a full **DroneRage** game implementation. This is an excellent reference for a complete shooting game with networking, damage systems, and colocation.
+
+## 🎮 DroneRage: Complete Shooting Game Reference
+
+DroneRage is a wave-based drone shooting game that demonstrates:
+- Networked weapons with raycasting
+- Damage interfaces and health systems  
+- Enemy AI and spawning
+- Player stats tracking
+- Colocation for multiplayer
+
+---
+
+## 🎯 Category 7: Weapon System (DroneRage)
+
+### `Weapon.cs` - Core Weapon Logic
+**Location:** `example code/Discover/DroneRage/Scripts/Weapons/Weapon.cs`
+
+**Purpose:** Base weapon class with configurable spread, damage, knockback, and fire rate.
+
+**Key Patterns:**
+```csharp
+public class Weapon : MonoBehaviour
+{
+    public event Action<Vector3, Vector3> WeaponFired;
+    public event Action StartedFiring;
+    public event Action StoppedFiring;
+
+    [SerializeField] private LayerMask m_raycastLayers = Physics.DefaultRaycastLayers;
+    [SerializeField] private Vector2 m_weaponSpread = new(0.01f, 0.05f);
+    [SerializeField] private Vector2 m_weaponDamage = new(8f, 14f);
+    [SerializeField] private Vector2 m_weaponKnockback = new(10f, 20f);
+    [SerializeField] private float m_fireRate = 0.0f;
+    [SerializeField] protected Transform m_muzzleTransform;
+
+    public WeaponHitHandler HitHandler { get; set; } = null;
+    public IDamageable.DamageCallback DamageCallback = null;
+
+    private bool m_isFiring = false;
+    private float m_lastShotTime = 0.0f;
+
+    private void Start()
+    {
+        HitHandler = new WeaponHitHandler(this);
+    }
+
+    public void StartFiring()
+    {
+        m_isFiring = true;
+        StartedFiring?.Invoke();
+    }
+
+    public void StopFiring()
+    {
+        m_isFiring = false;
+        StoppedFiring?.Invoke();
+    }
+
+    public void Shoot()
+    {
+        var shotOrigin = m_muzzleTransform.position;
+        var shotDir = m_muzzleTransform.TransformDirection(WeaponUtils.RandomSpread(m_weaponSpread));
+        
+        HitHandler?.ResolveHits(shotOrigin, shotDir);
+        WeaponFired?.Invoke(shotOrigin, shotDir);
+    }
+}
+```
+
+**Key Insight:** Uses **raycasting** instead of projectiles for instant hit detection. More performant for fast-firing weapons.
+
+### `WeaponHitHandler` - Raycast Hit Resolution
+**Purpose:** Resolves hits from raycast, applies damage and knockback.
+
+```csharp
+public class WeaponHitHandler
+{
+    private Weapon m_weapon;
+
+    public virtual void ResolveHits(Vector3 shotOrigin, Vector3 shotDirection)
+    {
+        var hits = Physics.RaycastAll(shotOrigin, shotDirection, Mathf.Infinity, 
+            m_weapon.RaycastLayers, QueryTriggerInteraction.Ignore);
+
+        if (hits.Length <= 0) return;
+
+        // Find closest hit
+        var closestHit = hits[0];
+        for (var i = 1; i < hits.Length; ++i)
+        {
+            if (hits[i].distance < closestHit.distance)
+                closestHit = hits[i];
+        }
+
+        var hitStrength = Random.Range(0f, 1f);
+
+        // Apply knockback to rigidbody
+        if (closestHit.rigidbody)
+        {
+            closestHit.rigidbody.AddForceAtPosition(
+                Mathf.Lerp(m_weapon.WeaponKnockback.x, m_weapon.WeaponKnockback.y, hitStrength) * shotDirection,
+                closestHit.point, ForceMode.Impulse);
+        }
+
+        // Reduce damage for friendly fire
+        var isFriendlyFire = closestHit.transform.GetComponent<Player>() != null;
+
+        // Apply damage to all IDamageable components
+        foreach (var damageable in closestHit.transform.GetComponents<IDamageable>())
+        {
+            var damage = Mathf.Lerp(m_weapon.WeaponDamage.x, m_weapon.WeaponDamage.y, hitStrength);
+            if (isFriendlyFire) damage *= 0.2f;
+            damageable.TakeDamage(damage, closestHit.point, closestHit.normal, m_weapon.DamageCallback);
+        }
+    }
+}
+```
+
+### `IDamageable` - Damage Interface
+**Location:** `example code/Discover/DroneRage/Scripts/Weapons/IDamageable.cs`
+
+**Purpose:** Common interface for anything that can take damage.
+
+```csharp
+public interface IDamageable
+{
+    public delegate void DamageCallback(IDamageable damagableAffected, float hpAffected, bool targetDied);
+
+    void Heal(float healing, DamageCallback callback = null);
+    void TakeDamage(float damage, Vector3 position, Vector3 normal, DamageCallback callback = null);
+}
+```
+
+**Why Use Interface:** Both `Player` and `Enemy` implement `IDamageable`, allowing weapons to damage anything without caring what it is.
+
+### `NetworkedWeaponController.cs` - Networked Weapon Sync
+**Location:** `example code/Discover/DroneRage/Scripts/Weapons/NetworkedWeaponController.cs`
+
+**Purpose:** Syncs weapon firing across network - only master client resolves hits.
+
+```csharp
+public class NetworkedWeaponController : NetworkBehaviour
+{
+    // Override hit handler to only process on master client
+    private class NetworkedWeaponHitHandler : WeaponHitHandler
+    {
+        public override void ResolveHits(Vector3 shotOrigin, Vector3 shotDirection)
+        {
+            // ONLY master client resolves hits - prevents double damage
+            if (!PhotonNetwork.Runner.IsMasterClient())
+                return;
+
+            m_hitHandler.ResolveHits(shotOrigin, shotDirection);
+        }
+    }
+
+    [Networked(OnChanged = nameof(OnIsFiringChanged))]
+    public NetworkBool IsFiring { get; private set; }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    private void WeaponFiredClientRPC(Vector3 shotOrigin, Vector3 shotDirection)
+    {
+        // Master resolves hits, everyone plays visuals
+        if (DroneRageGameController.Instance.HasStateAuthority)
+            m_controlledWeapon.HitHandler.ResolveHits(shotOrigin, shotDirection);
+
+        m_controlledWeaponVisuals.OnWeaponFired(shotOrigin, shotDirection);
+    }
+}
+```
+
+**Key Pattern:** Master client is authoritative for hit resolution. All clients play visual effects.
+
+---
+
+## 🎯 Category 8: Player & Health System (DroneRage)
+
+### `Player.cs` - Full Player Implementation
+**Location:** `example code/Discover/DroneRage/Scripts/Player/Player.cs`
+
+**Purpose:** Complete player with networked health, damage, death, and stats tracking.
+
+```csharp
+public class Player : NetworkMultiton<Player>, IDamageable
+{
+    public static Player LocalPlayer;
+    public static IEnumerable<Player> LivePlayers => Players.Where(p => p.Health > 0);
+
+    public event Action OnHpChange;
+    public event Action OnDeath;
+
+    [AutoSet] public PlayerStats PlayerStats;
+
+    [Networked(OnChanged = nameof(OnHealthChanged))]
+    public float Health { get; private set; }
+
+    public void SetupPlayer()
+    {
+        Object.RequestStateAuthority();
+        Health = 100;
+        LocalPlayer = this;
+    }
+
+    // IDamageable implementation
+    public void TakeDamage(float damage, Vector3 position, Vector3 normal, IDamageable.DamageCallback callback = null)
+    {
+        TakeDamageOwnerRPC(damage, position, normal);
+    }
+
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    private void TakeDamageOwnerRPC(float damage, Vector3 position, Vector3 normal)
+    {
+        if (!HasStateAuthority) return;
+        Health -= damage;
+        TakeDamageClientRPC(damage, position, normal);
+    }
+
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    private void TakeDamageClientRPC(float damage, Vector3 position, Vector3 normal)
+    {
+        PlayerStats.DamageTaken += damage;
+        CreateHitFX(damage, position, normal);
+    }
+
+    private static void OnHealthChanged(Changed<Player> changed)
+    {
+        changed.Behaviour.OnHpChange?.Invoke();
+        if (changed.Behaviour.Health <= 0f)
+            changed.Behaviour.Die();
+    }
+
+    private void Die()
+    {
+        Health = 0;
+        gameObject.layer = LayerMask.NameToLayer("Ignore Raycast");
+        OnDeath?.Invoke();
+        
+        if (PlayersLeft <= 0)
+            DroneRageGameController.Instance.TriggerGameOver(false);
+    }
+}
+```
+
+**Key Patterns:**
+1. `[Networked(OnChanged = ...)]` for reactive health updates
+2. Two-step RPC: `All→StateAuthority` (request damage) then `StateAuthority→All` (apply effects)
+3. `NetworkMultiton` pattern for tracking all player instances
+
+### `PlayerStats.cs` - Networked Statistics
+**Location:** `example code/Discover/DroneRage/Scripts/Player/PlayerStats.cs`
+
+```csharp
+public class PlayerStats : NetworkBehaviour
+{
+    [Networked] public uint Score { get; set; }
+    [Networked] public uint WavesSurvived { get; set; }
+    [Networked] public uint ShotsFired { get; set; }
+    [Networked] public uint ShotsHit { get; set; }
+    [Networked] public uint EnemiesKilled { get; set; }
+    [Networked] public float DamageDealt { get; set; }
+    [Networked] public float DamageTaken { get; set; }
+    [Networked] public float HealingReceived { get; set; }
+    [Networked] public ulong TicksSurvived { get; set; }
+
+    public double CalculateAccuracy() => ShotsFired == 0 ? 0 : ShotsHit / (double)ShotsFired;
+}
+```
+
+---
+
+## 🎯 Category 9: Colocation (Discover)
+
+### `ColocationDriverNetObj.cs` - Automatic Colocation
+**Location:** `example code/Discover/Scripts/Colocation/ColocationDriverNetObj.cs`
+
+**Purpose:** Simplified colocation using Meta's `AutomaticColocationLauncher`.
+
+```csharp
+public class ColocationDriverNetObj : NetworkBehaviour
+{
+    public static Action<bool> OnColocationCompletedCallback;
+
+    [SerializeField] private PhotonNetworkData m_networkData;
+    [SerializeField] private PhotonNetworkMessenger m_networkMessenger;
+    [SerializeField] private GameObject m_anchorPrefab;
+
+    private SharedAnchorManager m_sharedAnchorManager;
+    private AutomaticColocationLauncher m_colocationLauncher;
+
+    public override void Spawned()
+    {
+        Init();
+    }
+
+    private async void Init()
+    {
+        m_ovrCameraRigTransform = FindFirstObjectByType<OVRCameraRig>().transform;
+        m_oculusUser = await OculusPlatformUtils.GetLoggedInUser();
+        m_playerDeviceUid = OculusPlatformUtils.GetUserDeviceGeneratedUid();
+        SetupForColocation();
+    }
+
+    private void SetupForColocation()
+    {
+        m_networkMessenger.RegisterLocalPlayer(m_playerDeviceUid);
+        m_sharedAnchorManager = new SharedAnchorManager { AnchorPrefab = m_anchorPrefab };
+
+        NetworkAdapter.SetConfig(m_networkData, m_networkMessenger);
+
+        m_colocationLauncher = new AutomaticColocationLauncher();
+        m_colocationLauncher.Init(
+            NetworkAdapter.NetworkData,
+            NetworkAdapter.NetworkMessenger,
+            m_sharedAnchorManager,
+            m_ovrCameraRigTransform.gameObject,
+            m_playerDeviceUid,
+            m_oculusUser?.ID ?? default
+        );
+        
+        m_colocationLauncher.ColocationReady += OnColocationReady;
+        m_colocationLauncher.ColocationFailed += OnColocationFailed;
+        
+        if (HasStateAuthority)
+            m_colocationLauncher.CreateColocatedSpace();
+        else
+            m_colocationLauncher.ColocateAutomatically();
+    }
+
+    private void OnColocationReady()
+    {
+        // Disable per-frame alignment, use only on recenter
+        var alignCamBehaviour = FindFirstObjectByType<AlignCameraToAnchor>();
+        alignCamBehaviour.enabled = false;
+        
+        var alignManager = alignCamBehaviour.gameObject.AddComponent<AlignCameraToAnchorManager>();
+        alignManager.CameraAlignmentBehaviour = alignCamBehaviour;
+        alignManager.RealignToAnchor();
+
+        OnColocationCompletedCallback?.Invoke(true);
+    }
+}
+```
+
+**Key Insight:** Uses `AutomaticColocationLauncher` from `com.meta.xr.colocation` package for simplified setup.
+
+### `AlignCameraToAnchorManager.cs` - Recenter Handling
+**Purpose:** Re-aligns camera when user recenters HMD.
+
+```csharp
+public class AlignCameraToAnchorManager : MonoBehaviour
+{
+    public AlignCameraToAnchor CameraAlignmentBehaviour { get; set; }
+
+    private void OnEnable()
+    {
+        OVRManager.display.RecenteredPose += RealignToAnchor;
+        OVRManager.HMDMounted += RealignToAnchor;
+    }
+
+    public async void RealignToAnchor()
+    {
+#if UNITY_EDITOR
+        await UniTask.Delay(1000); // Delay for Link
+#endif
+        CameraAlignmentBehaviour?.RealignToAnchor();
+    }
+}
+```
+
+---
+
+## 🎯 Category 10: Networking Utilities (Discover)
+
+### `NetworkGrabbableObject.cs` - Ownership Transfer on Grab
+**Location:** `example code/Discover/Scripts/Networking/NetworkGrabbableObject.cs`
+
+```csharp
+[RequireComponent(typeof(Grabbable))]
+public class NetworkGrabbableObject : NetworkBehaviour
+{
+    [AutoSet]
+    [SerializeField] private Grabbable m_grabbable;
+
+    private void OnEnable()
+    {
+        m_grabbable.WhenPointerEventRaised += OnPointerEventRaised;
+    }
+
+    private void OnPointerEventRaised(PointerEvent pointerEvent)
+    {
+        if (pointerEvent.Type == PointerEventType.Select)
+        {
+            if (m_grabbable.SelectingPointsCount == 1)
+                TransferOwnershipToLocalPlayer();
+        }
+    }
+
+    private void TransferOwnershipToLocalPlayer()
+    {
+        if (!HasStateAuthority)
+            Object.RequestStateAuthority();
+    }
+}
+```
+
+### `PhotonNetwork.cs` - Helper Extensions
+**Location:** `example code/Discover/Scripts/Networking/PhotonNetwork.cs`
+
+```csharp
+public static class PhotonNetwork
+{
+    private static NetworkRunner s_runner;
+
+    public static NetworkRunner Runner =>
+        s_runner != null ? s_runner : (s_runner = NetworkRunner.Instances.FirstOrDefault());
+
+    public static bool IsMasterClient(this NetworkRunner r) =>
+        r != null && (r.IsSharedModeMasterClient || r.GameMode is GameMode.Single);
+
+    public static OVRCameraRig CameraRig => AppInteractionController.Instance?.CameraRig;
+
+    public static void Despawn(this NetworkObject obj) => Runner.Despawn(obj);
+}
+```
+
+---
+
+## 🎯 Category 11: Enemy & Spawning (DroneRage)
+
+### `Spawner.cs` - Wave-Based Enemy Spawning
+**Location:** `example code/Discover/DroneRage/Scripts/Enemies/Spawner.cs`
+
+```csharp
+public class Spawner : Singleton<Spawner>
+{
+    public static readonly int[] DronesPerWave = { 1, 8, 6, 21, 21, 28, 20, 0 };
+    public static readonly int[] MaxLiveDronesPerWave = { 1, 2, 2, 3, 3, 4, 4, 0 };
+    
+    public event Action OnWaveAdvance;
+    public GameObject DronePrefab;
+
+    public int Wave { get; private set; } = 0;
+    private int m_dronesSpawned = 0;
+    private int m_liveDrones = 0;
+
+    public void LOGDroneKill()
+    {
+        --m_liveDrones;
+        if (m_liveDrones <= 0 && m_dronesSpawned >= DronesPerWave[Wave])
+            AdvanceWave();
+    }
+
+    public Vector3 GetRandomSpawnPoint(Player targetPlayer)
+    {
+        var spawnOffset = targetPlayer.transform.forward;
+        spawnOffset.y = 0f;
+        spawnOffset = spawnOffset.normalized;
+
+        var angle = Random.Range(-180f, 180f);
+        spawnOffset = Quaternion.AngleAxis(angle, Vector3.up) * spawnOffset;
+        return 2f * (RoomSize.magnitude + 1f) * spawnOffset + new Vector3(0f, m_roomMaxExtent.y - 1f, 0f);
+    }
+}
+```
+
+---
+
+## 🎯 Updated Quick Reference: Which Script to Copy
+
+| Your Need | Example Script | Location | Key Pattern |
+|-----------|---------------|----------|-------------|
+| **Raycast weapon** | `Weapon.cs` | Discover/DroneRage | `Physics.RaycastAll()` + `IDamageable` |
+| **Networked weapon** | `NetworkedWeaponController.cs` | Discover/DroneRage | Master client resolves hits |
+| **Damage interface** | `IDamageable.cs` | Discover/DroneRage | Common interface for damage |
+| **Player health** | `Player.cs` | Discover/DroneRage | `[Networked] Health` + two-step RPC |
+| **Player stats** | `PlayerStats.cs` | Discover/DroneRage | All `[Networked]` properties |
+| **Auto colocation** | `ColocationDriverNetObj.cs` | Discover | `AutomaticColocationLauncher` |
+| **Recenter handling** | `AlignCameraToAnchorManager.cs` | Discover | `OVRManager.display.RecenteredPose` |
+| **Grab ownership** | `NetworkGrabbableObject.cs` | Discover | `RequestStateAuthority()` on select |
+| **Wave spawning** | `Spawner.cs` | Discover/DroneRage | Wave arrays + spawn points |
+| **Spawn bullets** | `BallSpawnerMotif.cs` | MRMotifs | `Runner.Spawn()` + `Rigidbody.AddForce()` |
+| **Share room mesh** | `SpaceSharingManager.cs` | MRMotifs | `MRUK.ShareRoomsAsync()` |
+
+---
+
+## 🔧 Raycast vs Projectile: When to Use Each
+
+### Raycast (DroneRage approach)
+**Pros:**
+- Instant hit detection
+- No network sync needed for bullet objects
+- More performant (no physics simulation)
+- Better for fast-firing weapons
+
+**Cons:**
+- No visible bullet travel
+- Harder to dodge
+
+**Use When:** Fast-firing weapons, performance critical, short-range
+
+### Projectile (MRMotifs approach)
+**Pros:**
+- Visible bullet travel
+- Can be dodged
+- More satisfying for slower weapons
+- Physical interactions with world
+
+**Cons:**
+- Requires `Runner.Spawn()` for each bullet
+- Physics simulation cost
+- Need to sync across network
+
+**Use When:** Slower weapons, player-vs-player (dodging matters), want physical bullet behavior
+
+---
+
+## 🔧 Updated Implementation Checklist
+
+Based on BOTH example codebases:
+
+### Option A: Raycast Weapons (DroneRage style)
+- [ ] Create `IDamageable` interface
+- [ ] Create `Weapon.cs` with configurable spread/damage/knockback
+- [ ] Create `NetworkedWeaponController.cs` for network sync
+- [ ] Implement `IDamageable` on `PlayerHealthMotif`
+- [ ] Master client resolves all hits
+
+### Option B: Projectile Weapons (MRMotifs style)
+- [ ] Keep current `BulletMotif.cs` with `Runner.Spawn()`
+- [ ] Keep `ShootingPlayerMotif.cs` for spawning
+- [ ] Sync bullet impacts via RPC
+
+### Colocation (Choose One)
+- [ ] **Simple:** Use `AutomaticColocationLauncher` (Discover style)
+- [ ] **Custom:** Use `OVRColocationSession` + Space Sharing (MRMotifs style)

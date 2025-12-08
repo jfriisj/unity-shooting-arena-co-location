@@ -154,6 +154,35 @@ namespace MRMotifs.ColocatedExperiences.Colocation
         }
 
         /// <summary>
+        /// Realigns the camera rig to the last known anchor position.
+        /// Called when user recenters HMD to maintain colocation alignment.
+        /// </summary>
+        public void RealignToLastAnchor()
+        {
+            if (!m_hasCalibrated || m_anchorPosition == Vector3.zero)
+            {
+                Debug.LogWarning("Motif: Cannot realign - no anchor position stored.");
+                return;
+            }
+
+            // For host: just update the reference position (they define the space)
+            if (m_isHost)
+            {
+                m_referenceRigPosition = m_cameraRigTransform.position;
+                Debug.Log($"Motif: Host realignment - updated reference position to {m_referenceRigPosition}");
+                return;
+            }
+
+            // For client: realign to the anchor position
+            // This re-applies the alignment transformation
+            var currentRigPosition = m_cameraRigTransform.position;
+            m_cameraRigTransform.position = m_anchorPosition;
+            m_referenceRigPosition = m_cameraRigTransform.position;
+            
+            Debug.Log($"Motif: Client realigned to anchor. Moved from {currentRigPosition} to {m_referenceRigPosition}");
+        }
+
+        /// <summary>
         /// Gets calibration status information for debugging.
         /// </summary>
         public string GetCalibrationStatus()

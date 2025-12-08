@@ -5,6 +5,7 @@ using Fusion;
 using UnityEngine;
 using Meta.XR.Samples;
 using Meta.XR.MultiplayerBlocks.Fusion;
+using MRMotifs.Shared;
 
 namespace MRMotifs.SharedActivities.ShootingSample
 {
@@ -18,7 +19,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
     {
         // Static configuration from ShootingGameConfigMotif
         public static float ConfigFireRate = 0.2f;
-        public static float ConfigBulletSpeed = 15f;
+        public static float ConfigBulletSpeed = 60f;
         public static float ConfigBulletLifetime = 5f;
 
         [Header("Projectile Settings")]
@@ -26,7 +27,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [SerializeField] private NetworkObject m_bulletPrefab;
 
         [Tooltip("Force applied to the bullet when fired.")]
-        [SerializeField] private float m_fireForce = 15f;
+        [SerializeField] private float m_fireForce = 60f;
 
         [Tooltip("Time between shots in seconds.")]
         [SerializeField] private float m_fireRate = 0.2f;
@@ -91,53 +92,40 @@ namespace MRMotifs.SharedActivities.ShootingSample
             if (ConfigBulletSpeed > 0) m_fireForce = ConfigBulletSpeed;
             if (ConfigBulletLifetime > 0) m_bulletLifetime = ConfigBulletLifetime;
 
-            m_cameraRig = FindAnyObjectByType<OVRCameraRig>();
-            m_playerHealth = GetComponent<PlayerHealthMotif>();
+            // Require critical dependencies - no fallbacks, expose missing config
+            m_cameraRig = DebugLogger.RequireNotNull(
+                FindAnyObjectByType<OVRCameraRig>(), 
+                "PLAYER", "OVRCameraRig in scene", this);
             
-            // Find the NetworkRunner
             m_networkRunner = FindAnyObjectByType<NetworkRunner>();
-            if (m_networkRunner != null)
+            if (m_networkRunner != null && m_networkRunner.IsRunning)
             {
                 OwnerPlayer = m_networkRunner.LocalPlayer;
+                DebugLogger.Player($"NetworkRunner found | player={OwnerPlayer}", this);
             }
-
-            // Create audio source for firing sounds
-            if (m_audioSource == null)
+            else
             {
-                m_spawnedAudioSource = gameObject.AddComponent<AudioSource>();
-                m_spawnedAudioSource.spatialBlend = 1f;
-                m_audioSource = m_spawnedAudioSource;
-            }
-
-            // Load fire sound from Resources if not assigned
-            if (m_fireSound == null)
-            {
-                m_fireSound = Resources.Load<AudioClip>("Audio/Fire");
-            }
-
-            // Load muzzle flash prefab from Resources if not assigned
-            if (m_muzzleFlashPrefab == null)
-            {
-                m_muzzleFlashPrefab = Resources.Load<GameObject>("MuzzleFlash");
-            }
-
-            // Set up fire points from camera rig if not assigned
-            if (m_cameraRig != null)
-            {
-                if (m_leftFirePoint == null)
-                {
-                    m_leftFirePoint = m_cameraRig.leftControllerAnchor;
-                }
-                if (m_rightFirePoint == null)
-                {
-                    m_rightFirePoint = m_cameraRig.rightControllerAnchor;
-                }
-
-                // Spawn weapon models (this is a local player component)
-                SpawnWeaponModels();
+                DebugLogger.Player("No NetworkRunner - running in local/practice mode", this);
             }
             
-            Debug.Log("[ShootingPlayerMotif] Started - weapons spawned");
+            m_playerHealth = GetComponent<PlayerHealthMotif>();
+
+            // Require serialized fields - these must be assigned in Inspector
+            DebugLogger.RequireSerializedField(m_bulletPrefab, "m_bulletPrefab", this);
+            DebugLogger.RequireSerializedField(m_audioSource, "m_audioSource", this);
+            DebugLogger.RequireSerializedField(m_fireSound, "m_fireSound", this);
+
+            // Fire points from camera rig
+            m_leftFirePoint = m_cameraRig.leftControllerAnchor;
+            m_rightFirePoint = m_cameraRig.rightControllerAnchor;
+            
+            DebugLogger.Require(m_leftFirePoint != null, "PLAYER", "leftControllerAnchor exists on OVRCameraRig", this);
+            DebugLogger.Require(m_rightFirePoint != null, "PLAYER", "rightControllerAnchor exists on OVRCameraRig", this);
+
+            // Spawn weapon models
+            SpawnWeaponModels();
+            
+            DebugLogger.Player($"Started | fireRate={m_fireRate:F2}s bulletSpeed={m_fireForce:F1} lifetime={m_bulletLifetime:F1}s", this);
         }
 
         private void OnDestroy()
@@ -156,11 +144,18 @@ namespace MRMotifs.SharedActivities.ShootingSample
         {
             if (m_weaponPrefab == null)
             {
-                Debug.Log("[ShootingPlayerMotif] SpawnWeaponModels - No weapon prefab assigned");
+                DebugLogger.Warning("PLAYER", "No weapon prefab assigned");
                 return;
             }
 
-            Debug.Log($"[ShootingPlayerMotif] SpawnWeaponModels - Prefab: {m_weaponPrefab.name}, RightPoint: {m_rightFirePoint != null}, LeftPoint: {m_leftFirePoint != null}");
+            // Check if weapons already exist to prevent duplication
+            if (m_rightWeaponInstance != null || m_leftWeaponInstance != null)
+            {
+                DebugLogger.Player("Weapons already spawned, skipping duplication.", this);
+                return;
+            }
+
+            DebugLogger.Player($"Spawning weapons | prefab={m_weaponPrefab.name} rightPoint={m_rightFirePoint != null} leftPoint={m_leftFirePoint != null}", this);
 
             // Spawn right hand weapon
             if (m_rightFirePoint != null)
@@ -173,7 +168,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
                 // Try to find muzzle point for accurate bullet spawning
                 m_rightMuzzle = FindMuzzlePoint(m_rightWeaponInstance);
-                Debug.Log($"[ShootingPlayerMotif] Right weapon spawned at {m_rightFirePoint.name}");
+                DebugLogger.Player($"Right weapon spawned | parent={m_rightFirePoint.name}", this);
             }
 
             // Optionally spawn left hand weapon (dual wield)
@@ -191,7 +186,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 m_leftWeaponInstance.transform.localScale = localScale;
 
                 m_leftMuzzle = FindMuzzlePoint(m_leftWeaponInstance);
-                Debug.Log($"[ShootingPlayerMotif] Left weapon spawned at {m_leftFirePoint.name}");
+                DebugLogger.Player($"Left weapon spawned | parent={m_leftFirePoint.name}", this);
             }
 
             // Hide controller visuals since weapons are now visible
@@ -212,7 +207,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
             if (leftInHand != null) HideControllersInTransform(leftInHand);
             if (rightInHand != null) HideControllersInTransform(rightInHand);
 
-            Debug.Log("[ShootingPlayerMotif] Controller models hidden");
+            DebugLogger.Player("Controller models hidden", this);
         }
 
         private void HideControllersInTransform(Transform parent)
@@ -251,7 +246,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
             if (leftInHand != null) ShowControllersInTransform(leftInHand);
             if (rightInHand != null) ShowControllersInTransform(rightInHand);
 
-            Debug.Log("[ShootingPlayerMotif] Controller models restored");
+            DebugLogger.Player("Controller models restored", this);
         }
 
         private void ShowControllersInTransform(Transform parent)
@@ -324,20 +319,21 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private void HandleShootingInput()
         {
             // Check for trigger input on either controller - support dual wielding
-            var leftTrigger = OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.LTouch);
-            var rightTrigger = OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.RTouch);
+            // Use GetDown for semi-automatic fire (must release and press again)
+            var leftTrigger = OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.LTouch);
+            var rightTrigger = OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.RTouch);
 
             // Each hand has independent fire rate
             if (leftTrigger && CanFireLeft())
             {
-                Debug.Log($"[ShootingPlayerMotif] Left trigger pressed! BulletPrefab: {m_bulletPrefab != null}, LeftFirePoint: {m_leftFirePoint != null}");
+                DebugLogger.Player($"Fire LEFT | ready={m_bulletPrefab != null && m_leftFirePoint != null}", this);
                 var firePoint = m_leftMuzzle != null ? m_leftMuzzle : m_leftFirePoint;
                 FireBullet(firePoint, m_leftFirePoint, isLeft: true);
             }
 
             if (rightTrigger && CanFireRight())
             {
-                Debug.Log($"[ShootingPlayerMotif] Right trigger pressed! BulletPrefab: {m_bulletPrefab != null}, RightFirePoint: {m_rightFirePoint != null}");
+                DebugLogger.Player($"Fire RIGHT | ready={m_bulletPrefab != null && m_rightFirePoint != null}", this);
                 var firePoint = m_rightMuzzle != null ? m_rightMuzzle : m_rightFirePoint;
                 FireBullet(firePoint, m_rightFirePoint, isLeft: false);
             }
@@ -355,11 +351,9 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
         private void FireBullet(Transform firePoint, Transform directionSource, bool isLeft)
         {
-            if (firePoint == null || m_bulletPrefab == null)
-            {
-                Debug.LogWarning($"[ShootingPlayerMotif] Cannot fire! firePoint: {firePoint != null}, bulletPrefab: {m_bulletPrefab != null}");
-                return;
-            }
+            // These should never be null if Start() passed - throw to expose bugs
+            DebugLogger.RequireNotNull(firePoint, "PLAYER", $"firePoint ({(isLeft ? "left" : "right")})", this);
+            DebugLogger.RequireNotNull(m_bulletPrefab, "PLAYER", "m_bulletPrefab", this);
 
             // Update the correct hand's fire time
             if (isLeft)
@@ -374,7 +368,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
             if (m_networkRunner != null && m_networkRunner.IsRunning)
             {
                 // Networked bullet spawn
-                Debug.Log($"[ShootingPlayerMotif] Spawning networked bullet at {firePoint.position}");
+                DebugLogger.Player($"Spawn NETWORKED bullet | pos={firePoint.position:F2} dir={direction:F2}", this);
 
                 var bullet = m_networkRunner.Spawn(
                     m_bulletPrefab,
@@ -393,13 +387,13 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 }
                 else
                 {
-                    Debug.LogError("[ShootingPlayerMotif] Failed to spawn networked bullet!");
+                    DebugLogger.Error("PLAYER", "Failed to spawn networked bullet!");
                 }
             }
             else
             {
                 // Local bullet spawn (practice mode / offline)
-                Debug.Log($"[ShootingPlayerMotif] Spawning local bullet at {firePoint.position}");
+                DebugLogger.Player($"Spawn LOCAL bullet | pos={firePoint.position:F2} dir={direction:F2}", this);
                 SpawnLocalBullet(firePoint.position, direction);
             }
 
@@ -524,7 +518,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 }
             }
 
-            Debug.Log($"[ShootingPlayerMotif] RespawnWeaponModels - CameraRig: {m_cameraRig != null}, WeaponPrefab: {m_weaponPrefab != null}, RightFirePoint: {m_rightFirePoint != null}");
+            DebugLogger.Player($"RespawnWeaponModels | cameraRig={m_cameraRig != null} weaponPrefab={m_weaponPrefab != null} rightFP={m_rightFirePoint != null}", this);
 
             // Spawn new weapons
             SpawnWeaponModels();

@@ -263,7 +263,10 @@ namespace MRMotifs.SharedActivities.ShootingSample
             // Reset all player stats
             foreach (var player in m_players)
             {
-                player.ResetStats();
+                if (player != null && player.Object != null && player.Object.IsValid)
+                {
+                    player.ResetStats();
+                }
             }
 
             PlaySoundRpc(true);

@@ -166,7 +166,7 @@ TrailRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4170924974484475727}
-  m_Enabled: 0
+  m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -182,7 +182,7 @@ TrailRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 0}
+  - {fileID: 2100000, guid: 4b40dbb00777f2141a8ff7278f450856, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -203,7 +203,7 @@ TrailRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
-  m_Time: 0.3
+  m_Time: 0.15
   m_PreviewTimeScale: 1
   m_Parameters:
     serializedVersion: 3
@@ -213,7 +213,7 @@ TrailRenderer:
       m_Curve:
       - serializedVersion: 3
         time: 0
-        value: 0.02
+        value: 0.05
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -222,7 +222,7 @@ TrailRenderer:
         outWeight: 0.33333334
       - serializedVersion: 3
         time: 1
-        value: 0.005
+        value: 0
         inSlope: 0
         outSlope: 0
         tangentMode: 0
@@ -287,8 +287,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_damage: 10
-  m_hitEffectPrefab: {fileID: 6151908392494861471, guid: 1c0d64f152cd2b342b15c8b7d6ad5c9b, type: 3}
-  m_playerHitEffectPrefab: {fileID: 0}
+  m_hitEffectPrefab: {fileID: 179232, guid: 855dc6071f8029e4f879247345a45240, type: 3}
+  m_playerHitEffectPrefab: {fileID: 1013274939826982, guid: a8b0d08ed3b376940a49ece0895e7d9c, type: 3}
   m_bulletCollisionVFXPrefab: {fileID: 0}
   m_trailRenderer: {fileID: 0}
   m_useGravity: 1
@@ -299,4 +299,4 @@ MonoBehaviour:
   m_wallLayers:
     serializedVersion: 2
     m_Bits: 1024
-  m_hitSound: {fileID: 0}
+  m_hitSound: {fileID: 8300000, guid: 424548b6aad85dc44b3b28efb4d27487, type: 3}
