@@ -1,9 +1,8 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
 
-#if FUSION2
 using System;
 using System.Collections;
-using Fusion;
+using Unity.Netcode;
 using UnityEngine;
 using Meta.XR.Samples;
 using Meta.XR.MRUtilityKit;
@@ -13,8 +12,9 @@ namespace MRMotifs.Shooting
 {
     /// <summary>
     /// Spawns drone enemies in waves for the shooting game.
-    /// Only runs on master client for authoritative spawning.
+    /// Only runs on server for authoritative spawning.
     /// Based on Discover/DroneRage Spawner.cs but simplified.
+    /// Converted from Photon Fusion to Unity NGO.
     /// </summary>
     [MetaCodeSample("MRMotifs-SharedActivities")]
     public class DroneSpawnerMotif : NetworkBehaviour
@@ -55,20 +55,26 @@ namespace MRMotifs.Shooting
         /// <summary>
         /// Current wave number (starts at 1).
         /// </summary>
-        [Networked]
-        public int CurrentWave { get; private set; }
+        public NetworkVariable<int> CurrentWave = new NetworkVariable<int>(
+            0,
+            NetworkVariableReadPermission.Everyone,
+            NetworkVariableWritePermission.Server);
         
         /// <summary>
         /// Number of drones spawned this wave.
         /// </summary>
-        [Networked]
-        public int DronesSpawnedThisWave { get; private set; }
+        public NetworkVariable<int> DronesSpawnedThisWave = new NetworkVariable<int>(
+            0,
+            NetworkVariableReadPermission.Everyone,
+            NetworkVariableWritePermission.Server);
         
         /// <summary>
         /// Number of drones currently alive.
         /// </summary>
-        [Networked]
-        public int LiveDroneCount { get; private set; }
+        public NetworkVariable<int> LiveDroneCount = new NetworkVariable<int>(
+            0,
+            NetworkVariableReadPermission.Everyone,
+            NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// Event fired when a new wave starts.
@@ -89,16 +95,18 @@ namespace MRMotifs.Shooting
         private bool m_isSpawning = false;
         private Coroutine m_spawnCoroutine;
 
-        public override void Spawned()
+        public override void OnNetworkSpawn()
         {
+            base.OnNetworkSpawn();
+
             m_config = FindFirstObjectByType<ShootingGameConfigMotif>();
             
-            DebugLogger.Shooting($"DroneSpawner spawned | IsMaster={Runner.IsMasterClient()}", this);
+            DebugLogger.Shooting($"DroneSpawner spawned | IsServer={IsServer}", this);
 
-            // Only master client spawns drones
-            if (!Runner.IsMasterClient())
+            // Only server spawns drones
+            if (!IsServer)
             {
-                DebugLogger.Shooting($"Not master client, destroying spawner", this);
+                DebugLogger.Shooting($"Not server, disabling spawner", this);
                 enabled = false;
                 return;
             }
@@ -113,8 +121,10 @@ namespace MRMotifs.Shooting
             StartCoroutine(StartFirstWaveAfterDelay());
         }
 
-        public override void Despawned(NetworkRunner runner, bool hasState)
+        public override void OnNetworkDespawn()
         {
+            base.OnNetworkDespawn();
+
             DroneMotif.OnDroneDestroyed -= OnDroneDestroyed;
             
             if (m_spawnCoroutine != null)
@@ -160,13 +170,13 @@ namespace MRMotifs.Shooting
         {
             if (m_isSpawning) return;
             
-            CurrentWave++;
-            DronesSpawnedThisWave = 0;
+            CurrentWave.Value++;
+            DronesSpawnedThisWave.Value = 0;
             
-            var dronesThisWave = GetDronesForWave(CurrentWave);
-            DebugLogger.Shooting($"Starting wave {CurrentWave} | drones={dronesThisWave}", this);
+            var dronesThisWave = GetDronesForWave(CurrentWave.Value);
+            DebugLogger.Shooting($"Starting wave {CurrentWave.Value} | drones={dronesThisWave}", this);
             
-            OnWaveStarted?.Invoke(CurrentWave);
+            OnWaveStarted?.Invoke(CurrentWave.Value);
             
             m_spawnCoroutine = StartCoroutine(SpawnWave(dronesThisWave));
         }
@@ -184,20 +194,20 @@ namespace MRMotifs.Shooting
         {
             m_isSpawning = true;
             
-            while (DronesSpawnedThisWave < totalDrones)
+            while (DronesSpawnedThisWave.Value < totalDrones)
             {
                 // Wait if too many drones are alive
-                if (LiveDroneCount >= m_maxLiveDrones)
+                if (LiveDroneCount.Value >= m_maxLiveDrones)
                 {
                     yield return new WaitForSeconds(1f);
                     continue;
                 }
                 
                 SpawnDrone();
-                DronesSpawnedThisWave++;
+                DronesSpawnedThisWave.Value++;
                 
                 // Wait between spawns
-                if (DronesSpawnedThisWave < totalDrones)
+                if (DronesSpawnedThisWave.Value < totalDrones)
                 {
                     var interval = m_config ? m_config.droneSpawnInterval : m_spawnInterval;
                     yield return new WaitForSeconds(interval);
@@ -205,7 +215,7 @@ namespace MRMotifs.Shooting
             }
             
             m_isSpawning = false;
-            DebugLogger.Shooting($"Wave {CurrentWave} spawning complete | spawned={DronesSpawnedThisWave}", this);
+            DebugLogger.Shooting($"Wave {CurrentWave.Value} spawning complete | spawned={DronesSpawnedThisWave.Value}", this);
             
             // Start monitoring for wave completion
             StartCoroutine(WaitForWaveCompletion());
@@ -224,10 +234,17 @@ namespace MRMotifs.Shooting
             
             DebugLogger.Shooting($"Spawning drone at {spawnPosition}", this);
             
-            var drone = Runner.Spawn(m_dronePrefab, spawnPosition, spawnRotation);
-            LiveDroneCount++;
+            // NGO spawning - instantiate and spawn
+            var droneGO = Instantiate(m_dronePrefab.gameObject, spawnPosition, spawnRotation);
+            var networkObj = droneGO.GetComponent<NetworkObject>();
+            if (networkObj != null)
+            {
+                networkObj.Spawn();
+            }
             
-            DebugLogger.Shooting($"Drone spawned | live drones={LiveDroneCount}", this);
+            LiveDroneCount.Value++;
+            
+            DebugLogger.Shooting($"Drone spawned | live drones={LiveDroneCount.Value}", this);
         }
 
         private Vector3 GetRandomSpawnPosition()
@@ -238,7 +255,7 @@ namespace MRMotifs.Shooting
             
             foreach (var player in players)
             {
-                if (player.CurrentHealth > 0)
+                if (player.CurrentHealth.Value > 0)
                 {
                     targetPosition = player.transform.position;
                     break;
@@ -262,22 +279,22 @@ namespace MRMotifs.Shooting
 
         private void OnDroneDestroyed(DroneMotif drone)
         {
-            if (!Runner.IsMasterClient()) return;
+            if (!IsServer) return;
             
-            LiveDroneCount = Mathf.Max(0, LiveDroneCount - 1);
-            DebugLogger.Shooting($"Drone destroyed | live drones={LiveDroneCount}", this);
+            LiveDroneCount.Value = Mathf.Max(0, LiveDroneCount.Value - 1);
+            DebugLogger.Shooting($"Drone destroyed | live drones={LiveDroneCount.Value}", this);
         }
 
         private IEnumerator WaitForWaveCompletion()
         {
             // Wait until all drones are destroyed
-            while (LiveDroneCount > 0)
+            while (LiveDroneCount.Value > 0)
             {
                 yield return new WaitForSeconds(1f);
             }
             
-            DebugLogger.Shooting($"Wave {CurrentWave} completed!", this);
-            OnWaveCompleted?.Invoke(CurrentWave);
+            DebugLogger.Shooting($"Wave {CurrentWave.Value} completed!", this);
+            OnWaveCompleted?.Invoke(CurrentWave.Value);
             
             // Auto-start next wave after delay
             yield return new WaitForSeconds(3f);
@@ -290,7 +307,7 @@ namespace MRMotifs.Shooting
         [ContextMenu("Force Next Wave")]
         public void ForceNextWave()
         {
-            if (!Runner.IsMasterClient()) return;
+            if (!IsServer) return;
             
             // Stop current spawning
             if (m_spawnCoroutine != null)
@@ -303,7 +320,7 @@ namespace MRMotifs.Shooting
             StartNextWave();
         }
 
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         private void OnDrawGizmosSelected()
         {
             // Visualize room bounds
@@ -322,7 +339,6 @@ namespace MRMotifs.Shooting
             Gizmos.DrawWireCube(new Vector3(m_roomCenter.x, spawnY, m_roomCenter.z), 
                                new Vector3(m_spawnDistance * 2f, 0.1f, m_spawnDistance * 2f));
         }
-        #endif
+#endif
     }
 }
-#endif

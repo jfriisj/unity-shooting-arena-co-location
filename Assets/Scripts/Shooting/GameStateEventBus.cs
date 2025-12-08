@@ -1,7 +1,6 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
 
 using System;
-using Fusion;
 using Meta.XR.Samples;
 
 namespace MRMotifs.Shooting
@@ -9,6 +8,7 @@ namespace MRMotifs.Shooting
     /// <summary>
     /// Static event bus for game state communication between components.
     /// Eliminates tight coupling and race conditions by using events instead of direct references.
+    /// Converted from Photon Fusion to Unity NGO.
     /// </summary>
     [MetaCodeSample("MRMotifs-SharedActivities")]
     public static class GameStateEventBus
@@ -25,8 +25,9 @@ namespace MRMotifs.Shooting
 
         /// <summary>
         /// Fired when a round ends (winner found or time up).
+        /// Parameter is winner's client ID (ulong.MaxValue if no winner/timeout).
         /// </summary>
-        public static event Action<PlayerRef> OnRoundEnded;
+        public static event Action<ulong> OnRoundEnded;
 
         /// <summary>
         /// Fired during countdown with the current countdown value.
@@ -60,9 +61,12 @@ namespace MRMotifs.Shooting
             OnRoundStarted?.Invoke();
         }
 
-        public static void FireRoundEnded(PlayerRef winner)
+        /// <summary>
+        /// Fire round ended event with NGO client ID.
+        /// </summary>
+        public static void FireRoundEndedNGO(ulong winnerClientId)
         {
-            OnRoundEnded?.Invoke(winner);
+            OnRoundEnded?.Invoke(winnerClientId);
         }
 
         public static void FireCountdownTick(int countdownValue)

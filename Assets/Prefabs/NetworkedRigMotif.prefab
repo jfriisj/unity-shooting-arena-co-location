@@ -9,9 +9,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4982865187823525995}
-  - component: {fileID: 8625031831588501359}
-  - component: {fileID: 5511116885931429169}
-  - component: {fileID: 6531646136820615647}
+  - component: {fileID: 67273499043716939}
+  - component: {fileID: 8707436898975784351}
+  - component: {fileID: 1458970881408400125}
   m_Layer: 0
   m_Name: NetworkedRigMotif
   m_TagString: Untagged
@@ -35,7 +35,7 @@ Transform:
   - {fileID: 5994369901548319353}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &8625031831588501359
+--- !u!114 &67273499043716939
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -44,15 +44,24 @@ MonoBehaviour:
   m_GameObject: {fileID: 140304470523445012}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 158639473, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Script: {fileID: 11500000, guid: bac6e1bbe4a24314996f0785a99c9931, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _stateAuthorityChangeErrorCorrectionDelta: 0
-  SyncScale: 0
-  SyncParent: 0
-  _autoAOIOverride: 1
-  DisableSharedModeInterpolation: 0
---- !u!114 &5511116885931429169
+  m_bulletPrefab: {fileID: 4977402733565551419, guid: 028640b4f6d790343bf6ad75fccc4704, type: 3}
+  m_fireForce: 60
+  m_fireRate: 0.2
+  m_bulletLifetime: 5
+  m_audioSource: {fileID: 0}
+  m_fireSound: {fileID: 0}
+  m_weaponPrefab: {fileID: 944482162286932611, guid: 9f0cc66579ec7fc46abf911ba6e1f966, type: 3}
+  m_weaponPositionOffset: {x: 0, y: 0, z: 0.05}
+  m_weaponRotationOffset: {x: -90, y: 180, z: 0}
+  m_weaponScale: 0.8
+  m_muzzleFlashPrefab: {fileID: 0}
+  m_muzzleFlashDuration: 0.05
+  m_leftFirePoint: {fileID: 0}
+  m_rightFirePoint: {fileID: 0}
+--- !u!114 &8707436898975784351
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -61,19 +70,19 @@ MonoBehaviour:
   m_GameObject: {fileID: 140304470523445012}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 33284fe95284c70428a2dcce353bfdfd, type: 3}
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _OculusName:
-    _length: 0
-    _data:
-      Data: 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-  nameTag: {fileID: 6437793538900866495}
-  nameTagGO: {fileID: 4561439103298873471}
-  nameTagPanel: {fileID: 8649887334106494488}
-  nameTagContainer: {fileID: 7790691341080110909}
-  heightOffset: 0.3
---- !u!114 &6531646136820615647
+  GlobalObjectIdHash: 824850210
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+--- !u!114 &1458970881408400125
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -82,17 +91,26 @@ MonoBehaviour:
   m_GameObject: {fileID: 140304470523445012}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
+  m_Script: {fileID: 11500000, guid: ecd2dc3d499fba54bb28692e284f3b37, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  SortKey: 1177620383
-  ObjectInterest: 1
-  Flags: 262145
-  NestedObjects: []
-  NetworkedBehaviours:
-  - {fileID: 8625031831588501359}
-  - {fileID: 5511116885931429169}
-  ForceRemoteRenderTimeframe: 0
+  m_maxHealth: 100
+  m_respawnDelay: 3
+  m_invulnerabilityDuration: 2
+  m_playerRenderer: {fileID: 0}
+  m_hitFlashColor: {r: 1, g: 0, b: 0, a: 1}
+  m_hitFlashDuration: 0.1
+  m_hitSound: {fileID: 8300000, guid: 424548b6aad85dc44b3b28efb4d27487, type: 3}
+  m_deathSound: {fileID: 8300000, guid: fa34296f2497a8448a86e14a6d59cda3, type: 3}
+  m_respawnSound: {fileID: 8300000, guid: 06b79da7c8c20e44a9642a1dcc475871, type: 3}
+  CurrentHealth:
+    m_InternalValue: 0
+  IsDead:
+    m_InternalValue: 0
+  IsInvulnerable:
+    m_InternalValue: 0
+  OwnerPlayer:
+    m_InternalValue: 0
 --- !u!1 &1104571682353472768
 GameObject:
   m_ObjectHideFlags: 0

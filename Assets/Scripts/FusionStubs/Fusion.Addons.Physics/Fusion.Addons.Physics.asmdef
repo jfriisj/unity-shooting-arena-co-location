@@ -1,0 +1,16 @@
+{
+    "name": "Fusion.Addons.Physics",
+    "rootNamespace": "Fusion.Addons.Physics",
+    "references": [
+        "Fusion.Unity"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

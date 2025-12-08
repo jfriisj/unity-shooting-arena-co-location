@@ -1,10 +1,8 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
 
-#if FUSION2
 using UnityEngine;
-using Fusion;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace MRMotifs.Shooting
 {
     /// <summary>
     /// Interface for any object that can take damage in the shooting game.
@@ -37,4 +35,3 @@ namespace MRMotifs.SharedActivities.ShootingSample
         void TakeDamage(float damage, Vector3 position, Vector3 normal, DamageCallback callback = null);
     }
 }
-#endif

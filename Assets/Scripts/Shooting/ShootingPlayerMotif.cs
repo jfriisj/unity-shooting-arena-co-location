@@ -1,10 +1,8 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
 
-#if FUSION2
-using Fusion;
+using Unity.Netcode;
 using UnityEngine;
 using Meta.XR.Samples;
-using Meta.XR.MultiplayerBlocks.Fusion;
 using MRMotifs.Shared;
 
 namespace MRMotifs.Shooting
@@ -13,9 +11,10 @@ namespace MRMotifs.Shooting
     /// Handles player shooting mechanics in a co-located multiplayer shooting game.
     /// Spawns networked projectiles when the player presses the trigger and manages
     /// the player's weapon visuals locally.
+    /// Converted from Photon Fusion to Unity NGO.
     /// </summary>
     [MetaCodeSample("MRMotifs-SharedActivities")]
-    public class ShootingPlayerMotif : MonoBehaviour
+    public class ShootingPlayerMotif : NetworkBehaviour
     {
         // Static configuration from ShootingGameConfigMotif
         public static float ConfigFireRate = 0.2f;
@@ -77,12 +76,6 @@ namespace MRMotifs.Shooting
         private GameObject m_leftWeaponInstance;
         private Transform m_rightMuzzle;
         private Transform m_leftMuzzle;
-        private NetworkRunner m_networkRunner;
-
-        /// <summary>
-        /// The PlayerRef of the owner of this shooting player.
-        /// </summary>
-        public PlayerRef OwnerPlayer { get; set; }
 
         private void Start()
         {
@@ -91,20 +84,18 @@ namespace MRMotifs.Shooting
             if (ConfigBulletSpeed > 0) m_fireForce = ConfigBulletSpeed;
             if (ConfigBulletLifetime > 0) m_bulletLifetime = ConfigBulletLifetime;
 
-            // Require critical dependencies - no fallbacks, expose missing config
+            // Require critical dependencies
             m_cameraRig = DebugLogger.RequireNotNull(
                 FindAnyObjectByType<OVRCameraRig>(), 
                 "PLAYER", "OVRCameraRig in scene", this);
             
-            m_networkRunner = FindAnyObjectByType<NetworkRunner>();
-            if (m_networkRunner != null && m_networkRunner.IsRunning)
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsConnectedClient)
             {
-                OwnerPlayer = m_networkRunner.LocalPlayer;
-                DebugLogger.Player($"NetworkRunner found | player={OwnerPlayer}", this);
+                DebugLogger.Player($"NetworkManager found | clientId={OwnerClientId}", this);
             }
             else
             {
-                DebugLogger.Player("No NetworkRunner - running in local/practice mode", this);
+                DebugLogger.Player("No NetworkManager - running in local/practice mode", this);
             }
             
             m_playerHealth = GetComponent<PlayerHealthMotif>();
@@ -120,10 +111,8 @@ namespace MRMotifs.Shooting
                 }
             }
 
-            // Require serialized fields - these must be assigned in Inspector
+            // Require serialized fields
             DebugLogger.RequireSerializedField(m_bulletPrefab, "m_bulletPrefab", this);
-            // m_audioSource is now auto-created if missing
-            // m_fireSound might be set via SetFireSound later, so we warn but don't require strictly if we expect runtime setup
             if (m_fireSound == null)
             {
                 DebugLogger.Warning("PLAYER", "m_fireSound is null. Sound will not play unless set via SetFireSound.");
@@ -144,7 +133,7 @@ namespace MRMotifs.Shooting
 
         private void OnDestroy()
         {
-            // Restore controller visibility when this component is destroyed
+            // Restore controller visibility
             ShowControllerModels();
         }
 
@@ -156,14 +145,14 @@ namespace MRMotifs.Shooting
                 return;
             }
 
-            // Check if weapons already exist to prevent duplication
+            // Check if weapons already exist
             if (m_rightWeaponInstance != null || m_leftWeaponInstance != null)
             {
                 DebugLogger.Player("Weapons already spawned, skipping duplication.", this);
                 return;
             }
 
-            DebugLogger.Player($"Spawning weapons | prefab={m_weaponPrefab.name} rightPoint={m_rightFirePoint != null} leftPoint={m_leftFirePoint != null}", this);
+            DebugLogger.Player($"Spawning weapons | prefab={m_weaponPrefab.name}", this);
 
             // Spawn right hand weapon
             if (m_rightFirePoint != null)
@@ -173,13 +162,11 @@ namespace MRMotifs.Shooting
                 m_rightWeaponInstance.transform.localRotation = Quaternion.Euler(m_weaponRotationOffset);
                 m_rightWeaponInstance.transform.localScale = Vector3.one * m_weaponScale;
                 m_rightWeaponInstance.name = "RightWeapon";
-
-                // Try to find muzzle point for accurate bullet spawning
                 m_rightMuzzle = FindMuzzlePoint(m_rightWeaponInstance);
                 DebugLogger.Player($"Right weapon spawned | parent={m_rightFirePoint.name}", this);
             }
 
-            // Optionally spawn left hand weapon (dual wield)
+            // Spawn left hand weapon (dual wield)
             if (m_leftFirePoint != null)
             {
                 m_leftWeaponInstance = Instantiate(m_weaponPrefab, m_leftFirePoint);
@@ -197,7 +184,6 @@ namespace MRMotifs.Shooting
                 DebugLogger.Player($"Left weapon spawned | parent={m_leftFirePoint.name}", this);
             }
 
-            // Hide controller visuals since weapons are now visible
             HideControllerModels();
         }
 
@@ -205,11 +191,9 @@ namespace MRMotifs.Shooting
         {
             if (m_cameraRig == null) return;
 
-            // Hide controller models under the controller anchors
             HideControllersInTransform(m_cameraRig.leftControllerAnchor);
             HideControllersInTransform(m_cameraRig.rightControllerAnchor);
             
-            // Also try the "InHand" anchors which some setups use
             var leftInHand = m_cameraRig.leftHandAnchor?.Find("LeftControllerInHandAnchor");
             var rightInHand = m_cameraRig.rightHandAnchor?.Find("RightControllerInHandAnchor");
             if (leftInHand != null) HideControllersInTransform(leftInHand);
@@ -224,14 +208,11 @@ namespace MRMotifs.Shooting
 
             foreach (Transform child in parent)
             {
-                // Skip our spawned weapons
                 if (child.name == "LeftWeapon" || child.name == "RightWeapon") continue;
 
-                // Hide any renderers that aren't our weapons
                 var renderers = child.GetComponentsInChildren<Renderer>(true);
                 foreach (var renderer in renderers)
                 {
-                    // Check if this renderer is part of our weapon
                     if (m_leftWeaponInstance != null && renderer.transform.IsChildOf(m_leftWeaponInstance.transform)) continue;
                     if (m_rightWeaponInstance != null && renderer.transform.IsChildOf(m_rightWeaponInstance.transform)) continue;
                     
@@ -244,11 +225,9 @@ namespace MRMotifs.Shooting
         {
             if (m_cameraRig == null) return;
 
-            // Show controller models under the controller anchors
             ShowControllersInTransform(m_cameraRig.leftControllerAnchor);
             ShowControllersInTransform(m_cameraRig.rightControllerAnchor);
             
-            // Also try the "InHand" anchors
             var leftInHand = m_cameraRig.leftHandAnchor?.Find("LeftControllerInHandAnchor");
             var rightInHand = m_cameraRig.rightHandAnchor?.Find("RightControllerInHandAnchor");
             if (leftInHand != null) ShowControllersInTransform(leftInHand);
@@ -263,7 +242,6 @@ namespace MRMotifs.Shooting
 
             foreach (Transform child in parent)
             {
-                // Skip our spawned weapons (they'll be destroyed separately)
                 if (child.name == "LeftWeapon" || child.name == "RightWeapon") continue;
 
                 var renderers = child.GetComponentsInChildren<Renderer>(true);
@@ -276,7 +254,6 @@ namespace MRMotifs.Shooting
 
         private Transform FindMuzzlePoint(GameObject weapon)
         {
-            // Look for common muzzle point names
             var muzzleNames = new[] { "Muzzle", "muzzle", "FirePoint", "firePoint", "MuzzlePoint", "Barrel" };
             foreach (var name in muzzleNames)
             {
@@ -286,7 +263,6 @@ namespace MRMotifs.Shooting
                     return muzzle;
                 }
 
-                // Search recursively
                 muzzle = FindChildRecursive(weapon.transform, name);
                 if (muzzle != null)
                 {
@@ -315,8 +291,9 @@ namespace MRMotifs.Shooting
 
         private void Update()
         {
-            // Don't allow shooting if player is dead (only check if networked and valid)
-            if (m_playerHealth != null && m_playerHealth.Object != null && m_playerHealth.Object.IsValid && m_playerHealth.IsDead)
+            // Don't allow shooting if player is dead
+            if (m_playerHealth != null && m_playerHealth.NetworkObject != null && 
+                m_playerHealth.NetworkObject.IsSpawned && m_playerHealth.IsDead.Value)
             {
                 return;
             }
@@ -326,12 +303,9 @@ namespace MRMotifs.Shooting
 
         private void HandleShootingInput()
         {
-            // Check for trigger input on either controller - support dual wielding
-            // Use GetDown for semi-automatic fire (must release and press again)
             var leftTrigger = OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.LTouch);
             var rightTrigger = OVRInput.GetDown(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.RTouch);
 
-            // Each hand has independent fire rate
             if (leftTrigger && CanFireLeft())
             {
                 DebugLogger.Player($"Fire LEFT | ready={m_bulletPrefab != null && m_leftFirePoint != null}", this);
@@ -359,44 +333,26 @@ namespace MRMotifs.Shooting
 
         private void FireBullet(Transform firePoint, Transform directionSource, bool isLeft)
         {
-            // These should never be null if Start() passed - throw to expose bugs
             DebugLogger.RequireNotNull(firePoint, "PLAYER", $"firePoint ({(isLeft ? "left" : "right")})", this);
             DebugLogger.RequireNotNull(m_bulletPrefab, "PLAYER", "m_bulletPrefab", this);
 
-            // Update the correct hand's fire time
             if (isLeft)
                 m_lastLeftFireTime = Time.time;
             else
                 m_lastRightFireTime = Time.time;
 
-            // Use direction from controller/hand, not necessarily muzzle
             var direction = directionSource != null ? directionSource.forward : firePoint.forward;
 
             // Check if we're connected to network
-            if (m_networkRunner != null && m_networkRunner.IsRunning)
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsConnectedClient)
             {
-                // Networked bullet spawn
+                // Networked bullet spawn - request server to spawn
                 DebugLogger.Player($"Spawn NETWORKED bullet | pos={firePoint.position:F2} dir={direction:F2}", this);
-
-                var bullet = m_networkRunner.Spawn(
-                    m_bulletPrefab,
-                    firePoint.position,
-                    Quaternion.LookRotation(direction),
-                    m_networkRunner.LocalPlayer
-                );
-
-                if (bullet != null)
-                {
-                    var bulletMotif = bullet.GetComponent<BulletMotif>();
-                    if (bulletMotif != null)
-                    {
-                        bulletMotif.Initialize(OwnerPlayer, direction * m_fireForce, m_bulletLifetime);
-                    }
-                }
-                else
-                {
-                    DebugLogger.Error("PLAYER", "Failed to spawn networked bullet!");
-                }
+                
+                // In NGO, we need to request the server to spawn the bullet
+                // This can be done via a ServerRpc on the player's NetworkObject
+                // For now, spawn locally and let the bullet's NetworkObject handle sync
+                SpawnBulletServerRpc(firePoint.position, Quaternion.LookRotation(direction), direction * m_fireForce);
             }
             else
             {
@@ -405,16 +361,38 @@ namespace MRMotifs.Shooting
                 SpawnLocalBullet(firePoint.position, direction);
             }
 
-            // Play fire sound
             PlayFireSound();
-
-            // Spawn muzzle flash effect
             SpawnMuzzleFlash(firePoint);
         }
 
-        /// <summary>
-        /// Spawns a muzzle flash effect at the given fire point.
-        /// </summary>
+        [ServerRpc]
+        public void SpawnBulletServerRpc(Vector3 position, Quaternion rotation, Vector3 velocity)
+        {
+            var bulletGO = Instantiate(m_bulletPrefab.gameObject, position, rotation);
+            
+            var rb = bulletGO.GetComponent<Rigidbody>();
+            if (rb != null)
+            {
+                rb.linearVelocity = velocity;
+            }
+
+            var bulletMotif = bulletGO.GetComponent<BulletMotif>();
+            if (bulletMotif != null)
+            {
+                bulletMotif.Initialize(OwnerClientId, velocity, m_bulletLifetime);
+            }
+
+            // If we're the server/host, spawn the NetworkObject
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsServer)
+            {
+                var networkObj = bulletGO.GetComponent<NetworkObject>();
+                if (networkObj != null)
+                {
+                    networkObj.Spawn();
+                }
+            }
+        }
+
         private void SpawnMuzzleFlash(Transform firePoint)
         {
             if (m_muzzleFlashPrefab == null || firePoint == null)
@@ -427,29 +405,22 @@ namespace MRMotifs.Shooting
             Destroy(muzzleFlash, m_muzzleFlashDuration);
         }
 
-        /// <summary>
-        /// Spawns a local (non-networked) bullet for practice/offline mode.
-        /// </summary>
         private void SpawnLocalBullet(Vector3 position, Vector3 direction)
         {
-            // Instantiate the bullet prefab locally
             var bulletGO = Instantiate(m_bulletPrefab.gameObject, position, Quaternion.LookRotation(direction));
             
-            // Remove NetworkObject component since we're not networked
             var networkObj = bulletGO.GetComponent<NetworkObject>();
             if (networkObj != null)
             {
                 Destroy(networkObj);
             }
 
-            // Set up rigidbody velocity
             var rb = bulletGO.GetComponent<Rigidbody>();
             if (rb != null)
             {
                 rb.linearVelocity = direction * m_fireForce;
             }
 
-            // Auto-destroy after lifetime
             Destroy(bulletGO, m_bulletLifetime);
         }
 
@@ -462,7 +433,7 @@ namespace MRMotifs.Shooting
         }
 
         /// <summary>
-        /// Sets the bullet prefab at runtime (useful for weapon switching).
+        /// Sets the bullet prefab at runtime.
         /// </summary>
         public void SetBulletPrefab(NetworkObject prefab)
         {
@@ -479,12 +450,7 @@ namespace MRMotifs.Shooting
 
         /// <summary>
         /// Configures the weapon visual prefab and its positioning at runtime.
-        /// Call this before Spawned() is called, or call SpawnWeaponModels() manually after.
         /// </summary>
-        /// <param name="weaponPrefab">The weapon model prefab to attach to controllers.</param>
-        /// <param name="positionOffset">Local position offset from the controller anchor.</param>
-        /// <param name="rotationOffset">Local rotation offset in Euler angles.</param>
-        /// <param name="scale">Uniform scale of the weapon.</param>
         public void ConfigureWeapon(GameObject weaponPrefab, Vector3 positionOffset, Vector3 rotationOffset, float scale)
         {
             m_weaponPrefab = weaponPrefab;
@@ -498,7 +464,6 @@ namespace MRMotifs.Shooting
         /// </summary>
         public void RespawnWeaponModels()
         {
-            // Destroy existing weapons
             if (m_rightWeaponInstance != null)
             {
                 Destroy(m_rightWeaponInstance);
@@ -508,7 +473,6 @@ namespace MRMotifs.Shooting
                 Destroy(m_leftWeaponInstance);
             }
 
-            // Ensure camera rig and fire points are set up
             if (m_cameraRig == null)
             {
                 m_cameraRig = FindAnyObjectByType<OVRCameraRig>();
@@ -526,9 +490,8 @@ namespace MRMotifs.Shooting
                 }
             }
 
-            DebugLogger.Player($"RespawnWeaponModels | cameraRig={m_cameraRig != null} weaponPrefab={m_weaponPrefab != null} rightFP={m_rightFirePoint != null}", this);
+            DebugLogger.Player($"RespawnWeaponModels | cameraRig={m_cameraRig != null} weaponPrefab={m_weaponPrefab != null}", this);
 
-            // Spawn new weapons
             SpawnWeaponModels();
         }
 
@@ -549,4 +512,3 @@ namespace MRMotifs.Shooting
         }
     }
 }
-#endif

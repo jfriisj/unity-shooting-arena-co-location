@@ -1,7 +1,6 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
 
-#if FUSION2
-using Fusion;
+using Unity.Netcode;
 using UnityEngine;
 using Meta.XR.Samples;
 using MRMotifs.Shared;
@@ -19,76 +18,67 @@ namespace MRMotifs.Shooting
         /// <summary>
         /// Number of kills this player has scored.
         /// </summary>
-        [Networked]
-        public int Kills { get; set; }
+        public NetworkVariable<int> Kills = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>
         /// Number of times this player has died.
         /// </summary>
-        [Networked]
-        public int Deaths { get; set; }
+        public NetworkVariable<int> Deaths = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>
         /// Total number of shots fired by this player.
         /// </summary>
-        [Networked]
-        public int ShotsFired { get; set; }
+        public NetworkVariable<int> ShotsFired = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>
         /// Number of shots that hit a target.
         /// </summary>
-        [Networked]
-        public int ShotsHit { get; set; }
+        public NetworkVariable<int> ShotsHit = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>
         /// Total damage dealt by this player.
         /// </summary>
-        [Networked]
-        public float DamageDealt { get; set; }
+        public NetworkVariable<float> DamageDealt = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>
         /// Total damage taken by this player.
         /// </summary>
-        [Networked]
-        public float DamageTaken { get; set; }
+        public NetworkVariable<float> DamageTaken = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>
         /// Total healing received by this player.
         /// </summary>
-        [Networked]
-        public float HealingReceived { get; set; }
+        public NetworkVariable<float> HealingReceived = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>
         /// Time survived in seconds.
         /// </summary>
-        [Networked]
-        public float TimeSurvived { get; set; }
+        public NetworkVariable<float> TimeSurvived = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>
         /// Number of drones killed by this player.
         /// </summary>
-        [Networked]
-        public int DroneKills { get; set; }
+        public NetworkVariable<int> DroneKills = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>
         /// Calculates shooting accuracy as a percentage (0-1).
         /// </summary>
-        public float Accuracy => ShotsFired > 0 ? (float)ShotsHit / ShotsFired : 0f;
+        public float Accuracy => ShotsFired.Value > 0 ? (float)ShotsHit.Value / ShotsFired.Value : 0f;
 
         /// <summary>
         /// Calculates K/D ratio.
         /// </summary>
-        public float KDRatio => Deaths > 0 ? (float)Kills / Deaths : Kills;
+        public float KDRatio => Deaths.Value > 0 ? (float)Kills.Value / Deaths.Value : Kills.Value;
 
         /// <summary>
         /// Increments kill count.
         /// </summary>
         public void AddKill()
         {
-            if (Object.HasStateAuthority)
+            if (IsOwner)
             {
-                Kills++;
-                DebugLogger.Player($"Kill recorded | total={Kills}", this);
+                Kills.Value++;
+                DebugLogger.Player($"Kill recorded | total={Kills.Value}", this);
             }
         }
 
@@ -97,10 +87,10 @@ namespace MRMotifs.Shooting
         /// </summary>
         public void AddDeath()
         {
-            if (Object.HasStateAuthority)
+            if (IsOwner)
             {
-                Deaths++;
-                DebugLogger.Player($"Death recorded | total={Deaths}", this);
+                Deaths.Value++;
+                DebugLogger.Player($"Death recorded | total={Deaths.Value}", this);
             }
         }
 
@@ -109,10 +99,10 @@ namespace MRMotifs.Shooting
         /// </summary>
         public void AddDroneKill()
         {
-            if (Object.HasStateAuthority)
+            if (IsOwner)
             {
-                DroneKills++;
-                DebugLogger.Player($"Drone kill recorded | total={DroneKills}", this);
+                DroneKills.Value++;
+                DebugLogger.Player($"Drone kill recorded | total={DroneKills.Value}", this);
             }
         }
 
@@ -121,9 +111,9 @@ namespace MRMotifs.Shooting
         /// </summary>
         public void RecordShotFired()
         {
-            if (Object.HasStateAuthority)
+            if (IsOwner)
             {
-                ShotsFired++;
+                ShotsFired.Value++;
             }
         }
 
@@ -133,11 +123,11 @@ namespace MRMotifs.Shooting
         /// <param name="damage">Damage dealt by the shot.</param>
         public void RecordShotHit(float damage)
         {
-            if (Object.HasStateAuthority)
+            if (IsOwner)
             {
-                ShotsHit++;
-                DamageDealt += damage;
-                DebugLogger.Player($"Hit recorded | accuracy={Accuracy:P0} totalDamage={DamageDealt:F0}", this);
+                ShotsHit.Value++;
+                DamageDealt.Value += damage;
+                DebugLogger.Player($"Hit recorded | accuracy={Accuracy:P0} totalDamage={DamageDealt.Value:F0}", this);
             }
         }
 
@@ -147,9 +137,9 @@ namespace MRMotifs.Shooting
         /// <param name="damage">Amount of damage taken.</param>
         public void RecordDamageTaken(float damage)
         {
-            if (Object.HasStateAuthority)
+            if (IsOwner)
             {
-                DamageTaken += damage;
+                DamageTaken.Value += damage;
             }
         }
 
@@ -159,9 +149,9 @@ namespace MRMotifs.Shooting
         /// <param name="healing">Amount of healing received.</param>
         public void RecordHealing(float healing)
         {
-            if (Object.HasStateAuthority)
+            if (IsOwner)
             {
-                HealingReceived += healing;
+                HealingReceived.Value += healing;
             }
         }
 
@@ -170,16 +160,16 @@ namespace MRMotifs.Shooting
         /// </summary>
         public void ResetStats()
         {
-            if (Object.HasStateAuthority)
+            if (IsOwner)
             {
-                Kills = 0;
-                Deaths = 0;
-                ShotsFired = 0;
-                ShotsHit = 0;
-                DamageDealt = 0f;
-                DamageTaken = 0f;
-                HealingReceived = 0f;
-                TimeSurvived = 0f;
+                Kills.Value = 0;
+                Deaths.Value = 0;
+                ShotsFired.Value = 0;
+                ShotsHit.Value = 0;
+                DamageDealt.Value = 0f;
+                DamageTaken.Value = 0f;
+                HealingReceived.Value = 0f;
+                TimeSurvived.Value = 0f;
                 
                 DebugLogger.Player("Stats reset", this);
             }
@@ -190,27 +180,26 @@ namespace MRMotifs.Shooting
         /// </summary>
         public string GetStatsString()
         {
-            return $"K/D: {Kills}/{Deaths} ({KDRatio:F2})\n" +
+            return $"K/D: {Kills.Value}/{Deaths.Value} ({KDRatio:F2})\n" +
                    $"Accuracy: {Accuracy:P0}\n" +
-                   $"Damage: {DamageDealt:F0} / {DamageTaken:F0}\n" +
-                   $"Time: {TimeSurvived:F0}s";
+                   $"Damage: {DamageDealt.Value:F0} / {DamageTaken.Value:F0}\n" +
+                   $"Time: {TimeSurvived.Value:F0}s";
         }
 
         private void FixedUpdate()
         {
-            // Ensure network object is valid before accessing Object property
-            if (Object == null || !Object.IsValid) return;
+            // Ensure network object is valid before accessing
+            if (!IsSpawned) return;
 
             // Track survival time (only when alive and game is running)
-            if (Object.HasStateAuthority)
+            if (IsOwner)
             {
                 var health = GetComponent<PlayerHealthMotif>();
                 if (health != null && !health.IsDeadLocal)
                 {
-                    TimeSurvived += Time.fixedDeltaTime;
+                    TimeSurvived.Value += Time.fixedDeltaTime;
                 }
             }
         }
     }
 }
-#endif

@@ -1,6 +1,4 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-
-#if FUSION2
 using UnityEngine;
 using Meta.XR.Samples;
 
@@ -35,6 +33,9 @@ namespace MRMotifs.Shooting
         [Tooltip("Time before automatically starting a new round after round end.")]
         [Range(5, 60)]
         public float autoRestartDelay = 10f;
+
+        [Tooltip("Whether to automatically restart rounds.")]
+        public bool autoRestart = true;
 
         [Header("=== PLAYER STATS ===")]
         
@@ -217,33 +218,13 @@ namespace MRMotifs.Shooting
         /// </summary>
         public void ApplyConfiguration()
         {
-            ApplyToGameManager();
+            // Game Manager now reads config directly, no need to push values
             ApplyToPlayerHealth();
             ApplyToBullets();
             ApplyToShootingPlayer();
             ApplyToDrones();
 
             Debug.Log("[ShootingGameConfig] Configuration applied to all components");
-        }
-
-        private void ApplyToGameManager()
-        {
-            var gameManager = GetComponent<ShootingGameManagerMotif>();
-            if (gameManager == null)
-            {
-                gameManager = FindAnyObjectByType<ShootingGameManagerMotif>();
-            }
-
-            if (gameManager != null)
-            {
-                var type = typeof(ShootingGameManagerMotif);
-                var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
-
-                SetField(type, gameManager, "m_killsToWin", killsToWin, flags);
-                SetField(type, gameManager, "m_roundDuration", roundDuration, flags);
-                SetField(type, gameManager, "m_minPlayersToStart", minPlayersToStart, flags);
-                SetField(type, gameManager, "m_autoRestartDelay", autoRestartDelay, flags);
-            }
         }
 
         private void ApplyToPlayerHealth()
@@ -276,15 +257,6 @@ namespace MRMotifs.Shooting
             DroneMotif.ConfigSpeed = droneSpeed;
         }
 
-        private void SetField(System.Type type, object target, string fieldName, object value, System.Reflection.BindingFlags flags)
-        {
-            var field = type.GetField(fieldName, flags);
-            if (field != null)
-            {
-                field.SetValue(target, value);
-            }
-        }
-
         /// <summary>
         /// Get a formatted summary of current configuration.
         /// </summary>
@@ -304,4 +276,3 @@ namespace MRMotifs.Shooting
         }
     }
 }
-#endif

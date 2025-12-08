@@ -1,62 +1,63 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
 
-#if FUSION2
-using Fusion;
-using Fusion.Sockets;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using System.Collections;
-using System.Collections.Generic;
-using System;
 
-namespace MRMotifs.SharedActivities.Network
+namespace MRMotifs.Shooting.Network
 {
     /// <summary>
     /// Monitors the network connection and handles application pause/resume.
     /// Automatically restarts the game if the connection is lost during standby.
+    /// Converted from Photon Fusion to Unity NGO.
     /// </summary>
-    public class ConnectionManagerMotif : MonoBehaviour, INetworkRunnerCallbacks
+    public class ConnectionManagerMotif : MonoBehaviour
     {
-        private NetworkRunner m_runner;
+        private static ConnectionManagerMotif s_instance;
 
         private void Awake()
         {
-            // Find existing runner
-            m_runner = FindAnyObjectByType<NetworkRunner>();
+            if (s_instance != null && s_instance != this)
+            {
+                Destroy(gameObject);
+                return;
+            }
+            s_instance = this;
+            DontDestroyOnLoad(gameObject);
         }
 
         private void Start()
         {
-            if (m_runner != null)
+            // Subscribe to NGO connection events
+            if (NetworkManager.Singleton != null)
             {
-                m_runner.AddCallbacks(this);
+                NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnect;
+                NetworkManager.Singleton.OnTransportFailure += OnTransportFailure;
             }
             else
             {
-                StartCoroutine(FindRunner());
+                StartCoroutine(WaitForNetworkManager());
             }
-            
-            DontDestroyOnLoad(gameObject);
         }
 
-        private IEnumerator FindRunner()
+        private IEnumerator WaitForNetworkManager()
         {
-            while (m_runner == null)
+            while (NetworkManager.Singleton == null)
             {
-                m_runner = FindAnyObjectByType<NetworkRunner>();
-                if (m_runner != null)
-                {
-                    m_runner.AddCallbacks(this);
-                }
                 yield return new WaitForSeconds(1f);
             }
+            
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnect;
+            NetworkManager.Singleton.OnTransportFailure += OnTransportFailure;
         }
 
         private void OnDestroy()
         {
-            if (m_runner != null)
+            if (NetworkManager.Singleton != null)
             {
-                m_runner.RemoveCallbacks(this);
+                NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnect;
+                NetworkManager.Singleton.OnTransportFailure -= OnTransportFailure;
             }
         }
 
@@ -75,7 +76,7 @@ namespace MRMotifs.SharedActivities.Network
             // Wait a moment for network stack to wake up
             yield return new WaitForSeconds(1.0f);
 
-            if (m_runner == null || !m_runner.IsRunning)
+            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsConnectedClient)
             {
                 Debug.LogWarning("[ConnectionManager] Network disconnected after resume. Reloading scene...");
                 RestartGame();
@@ -86,60 +87,34 @@ namespace MRMotifs.SharedActivities.Network
             }
         }
 
-        public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason)
+        private void OnClientDisconnect(ulong clientId)
         {
-            Debug.LogWarning($"[ConnectionManager] Disconnected from server: {reason}. Reloading scene...");
-            RestartGame();
-        }
-        
-        public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason)
-        {
-             Debug.LogWarning($"[ConnectionManager] Connection failed: {reason}. Reloading scene...");
-             RestartGame();
+            // Only react if we (the local client) got disconnected
+            if (NetworkManager.Singleton != null && clientId == NetworkManager.Singleton.LocalClientId)
+            {
+                Debug.LogWarning($"[ConnectionManager] Disconnected from server. Reloading scene...");
+                RestartGame();
+            }
         }
 
-        public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
+        private void OnTransportFailure()
         {
-            Debug.LogWarning($"[ConnectionManager] Runner shutdown: {shutdownReason}. Reloading scene...");
+            Debug.LogWarning("[ConnectionManager] Transport failure. Reloading scene...");
             RestartGame();
         }
 
         private void RestartGame()
         {
-            // Remove callbacks to prevent multiple restarts
-            if (m_runner != null)
+            // Shutdown network manager
+            if (NetworkManager.Singleton != null)
             {
-                m_runner.RemoveCallbacks(this);
-            }
-            
-            // Destroy the runner to ensure clean state
-            if (m_runner != null)
-            {
-                Destroy(m_runner.gameObject);
+                NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnect;
+                NetworkManager.Singleton.OnTransportFailure -= OnTransportFailure;
+                NetworkManager.Singleton.Shutdown();
             }
 
             // Reload the current scene
             SceneManager.LoadScene(SceneManager.GetActiveScene().buildIndex);
         }
-
-        #region INetworkRunnerCallbacks Empty Implementations
-        public void OnPlayerJoined(NetworkRunner runner, PlayerRef player) { }
-        public void OnPlayerLeft(NetworkRunner runner, PlayerRef player) { }
-        public void OnInput(NetworkRunner runner, NetworkInput input) { }
-        public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }
-        public void OnConnectedToServer(NetworkRunner runner) { }
-        public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }
-        public void OnUserSimulationMessage(NetworkRunner runner, SimulationMessagePtr message) { }
-        public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList) { }
-        public void OnCustomAuthenticationResponse(NetworkRunner runner, Dictionary<string, object> data) { }
-        public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
-        public void OnReliableDataReceived(NetworkRunner runner, PlayerRef player, ReliableKey key, ArraySegment<byte> data) { }
-        public void OnReliableDataProgress(NetworkRunner runner, PlayerRef player, ReliableKey key, float progress) { }
-        public void OnSceneLoadDone(NetworkRunner runner) { }
-        public void OnSceneLoadStart(NetworkRunner runner) { }
-        public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
-        public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
-        #endregion
     }
 }
-#endif

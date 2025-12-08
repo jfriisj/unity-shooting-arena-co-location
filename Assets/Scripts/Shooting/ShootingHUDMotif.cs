@@ -1,6 +1,4 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-
-#if FUSION2
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
@@ -70,7 +68,7 @@ namespace MRMotifs.Shooting
                 var players = FindObjectsByType<PlayerHealthMotif>(FindObjectsSortMode.None);
                 foreach (var player in players)
                 {
-                    if (player.Object != null && player.Object.HasStateAuthority)
+                    if (player.NetworkObject != null && player.NetworkObject.IsOwner)
                     {
                         m_playerHealth = player;
                         break;
@@ -89,7 +87,7 @@ namespace MRMotifs.Shooting
             m_playerHealth.OnPlayerRespawned += OnPlayerRespawned;
 
             // Initialize UI
-            UpdateHealth(m_playerHealth.CurrentHealth, 100);
+            UpdateHealth(m_playerHealth.CurrentHealth.Value, 100);
             UpdateScore(m_playerHealth.Kills, m_playerHealth.Deaths);
 
             // Hide markers initially
@@ -238,7 +236,7 @@ namespace MRMotifs.Shooting
             }
         }
 
-        private void OnPlayerDied(Fusion.PlayerRef killer)
+        private void OnPlayerDied(ulong killer)
         {
             if (m_deathPanel != null)
             {
@@ -298,4 +296,3 @@ namespace MRMotifs.Shooting
         }
     }
 }
-#endif

@@ -20,6 +20,7 @@ namespace MRMotifs.Shared
         public static bool EnableNetwork = true;
         public static bool EnableHealth = true;
         public static bool EnableGame = true;
+        public static bool EnableShooting = true;
 
         private const string COLOR_BULLET = "#FF6B6B";      // Red
         private const string COLOR_PLAYER = "#4ECDC4";      // Teal
@@ -27,6 +28,7 @@ namespace MRMotifs.Shared
         private const string COLOR_NETWORK = "#96CEB4";     // Green
         private const string COLOR_HEALTH = "#FFEAA7";      // Yellow
         private const string COLOR_GAME = "#DDA0DD";        // Plum
+        private const string COLOR_SHOOTING = "#FF69B4";    // Hot Pink
         private const string COLOR_WARNING = "#FFB347";     // Orange
         private const string COLOR_ERROR = "#FF4444";       // Bright Red
 
@@ -81,13 +83,23 @@ namespace MRMotifs.Shared
         }
 
         /// <summary>
-        /// Log game state messages.
+        /// Log game-related messages.
         /// </summary>
         [Conditional("UNITY_EDITOR"), Conditional("DEVELOPMENT_BUILD")]
         public static void Game(string message, Object context = null)
         {
             if (EnableGame)
                 Debug.Log(Format("GAME", COLOR_GAME, message), context);
+        }
+
+        /// <summary>
+        /// Log shooting-related messages (drones, bullets, combat).
+        /// </summary>
+        [Conditional("UNITY_EDITOR"), Conditional("DEVELOPMENT_BUILD")]
+        public static void Shooting(string message, Object context = null)
+        {
+            if (EnableShooting)
+                Debug.Log(Format("SHOOTING", COLOR_SHOOTING, message), context);
         }
 
         /// <summary>

@@ -1,7 +1,6 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-
-#if FUSION2
 using UnityEngine;
+using Unity.Netcode;
 using Meta.XR.Samples;
 using MRMotifs.Shared;
 
@@ -65,8 +64,8 @@ namespace MRMotifs.Shooting
 
         private void Start()
         {
-            // Only run AI on master client
-            if (!m_drone.Runner.IsMasterClient())
+            // Only run AI on server
+            if (!NetworkManager.Singleton.IsServer)
             {
                 enabled = false;
                 return;
@@ -100,7 +99,7 @@ namespace MRMotifs.Shooting
 
         private void Update()
         {
-            if (!m_isInitialized || m_drone.Health <= 0f)
+            if (!m_isInitialized || m_drone.Health.Value <= 0f)
             {
                 if (CurrentState != AIState.Dying)
                 {
@@ -241,7 +240,7 @@ namespace MRMotifs.Shooting
 
             foreach (var player in players)
             {
-                if (player.CurrentHealth <= 0f) continue; // Skip dead players
+                if (player.CurrentHealth.Value <= 0f) continue; // Skip dead players
                 
                 var distance = Vector3.Distance(m_transform.position, player.transform.position);
                 if (distance < nearestDistance)
@@ -347,4 +346,3 @@ namespace MRMotifs.Shooting
         #endif
     }
 }
-#endif

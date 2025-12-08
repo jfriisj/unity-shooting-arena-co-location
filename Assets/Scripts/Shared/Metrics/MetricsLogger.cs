@@ -1,15 +1,14 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
 
-#if FUSION2
-using Fusion;
 using System;
 using System.IO;
 using System.Text;
 using System.Collections.Generic;
 using UnityEngine;
+using Unity.Netcode;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.Metrics
+namespace MRMotifs.Shooting.Metrics
 {
     /// <summary>
     /// Collects and logs performance and collaboration metrics for research data collection.
@@ -70,7 +69,6 @@ namespace MRMotifs.SharedActivities.Metrics
         private float m_batteryTemperature = 25f;
         
         // Network state
-        private NetworkRunner m_networkRunner;
         private int m_participantCount;
         private string m_sceneState = "Offline";
         
@@ -287,45 +285,21 @@ namespace MRMotifs.SharedActivities.Metrics
         
         private void UpdateNetworkState()
         {
-            // Use NetworkRunner.Instances for more reliable runner detection
-            // This handles cases where runner is in DontDestroyOnLoad or dynamically instantiated
-            if (m_networkRunner == null || !m_networkRunner.IsRunning)
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening)
             {
-                // Try to find a running NetworkRunner from Fusion's internal list
-                foreach (var runner in NetworkRunner.Instances)
-                {
-                    if (runner != null && runner.IsRunning)
-                    {
-                        m_networkRunner = runner;
-                        Debug.Log($"[MetricsLogger] Found running NetworkRunner via Instances: State={runner.State}, Mode={runner.GameMode}");
-                        break;
-                    }
-                }
+                m_participantCount = NetworkManager.Singleton.ConnectedClientsIds.Count;
                 
-                // Fallback to FindAnyObjectByType if Instances is empty
-                if (m_networkRunner == null)
-                {
-                    m_networkRunner = FindAnyObjectByType<NetworkRunner>();
-                    if (m_networkRunner != null)
-                    {
-                        Debug.Log($"[MetricsLogger] Found NetworkRunner via FindAnyObjectByType: IsRunning={m_networkRunner.IsRunning}, State={m_networkRunner.State}");
-                    }
-                }
-            }
-            
-            if (m_networkRunner != null && m_networkRunner.IsRunning)
-            {
-                m_participantCount = m_networkRunner.SessionInfo?.PlayerCount ?? 0;
-                
-                if (m_networkRunner.IsServer || m_networkRunner.IsSharedModeMasterClient)
+                if (NetworkManager.Singleton.IsHost)
                     m_sceneState = "Host";
-                else
+                else if (NetworkManager.Singleton.IsServer)
+                    m_sceneState = "Server";
+                else if (NetworkManager.Singleton.IsClient)
                     m_sceneState = "Client";
             }
             else
             {
                 m_participantCount = 0;
-                m_sceneState = "NotConnected"; // Fusion session not yet established
+                m_sceneState = "Offline";
             }
         }
         
@@ -371,15 +345,9 @@ namespace MRMotifs.SharedActivities.Metrics
         
         private float GetNetworkLatency()
         {
-            // Use Fusion's built-in RTT measurement
-            // GetPlayerRtt returns RTT in seconds, convert to milliseconds
-            if (m_networkRunner != null && m_networkRunner.IsRunning)
-            {
-                // Get RTT to the SharedModeMasterClient (host)
-                // In Shared Mode, all clients measure RTT to the cloud relay
-                double rttSeconds = m_networkRunner.GetPlayerRtt(m_networkRunner.LocalPlayer);
-                return (float)(rttSeconds * 1000.0); // Convert to ms
-            }
+            // NGO doesn't expose RTT easily for all transports. 
+            // For local co-location, latency is usually < 5ms.
+            // Returning 0 for now as placeholder.
             return 0f;
         }
         
@@ -390,12 +358,8 @@ namespace MRMotifs.SharedActivities.Metrics
                 return m_calibrationTracker.GetCurrentError();
             }
             
-            // Fallback: try to find ColocationManager
-            var colocationManager = FindAnyObjectByType<MRMotifs.ColocatedExperiences.Colocation.ColocationManager>();
-            if (colocationManager != null)
-            {
-                return colocationManager.GetCurrentCalibrationError();
-            }
+            // Note: ColocationManager removed - now using Meta's Building Blocks for colocation
+            // Calibration error tracking is handled by CalibrationAccuracyTracker
             
             return 0f;
         }
@@ -561,4 +525,3 @@ namespace MRMotifs.SharedActivities.Metrics
         #endregion
     }
 }
-#endif

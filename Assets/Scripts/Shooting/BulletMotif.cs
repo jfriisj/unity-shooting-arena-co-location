@@ -1,7 +1,6 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
 
-#if FUSION2
-using Fusion;
+using Unity.Netcode;
 using UnityEngine;
 using System.Collections;
 using Meta.XR.Samples;
@@ -62,19 +61,19 @@ namespace MRMotifs.Shooting
         [SerializeField] private AudioClip m_hitSound;
 
         /// <summary>
-        /// The player who fired this bullet.
+        /// The player who fired this bullet (client ID).
         /// </summary>
-        [Networked] public PlayerRef OwnerPlayer { get; set; }
+        public NetworkVariable<ulong> OwnerPlayer = new NetworkVariable<ulong>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>
         /// The velocity of the bullet, synchronized across clients.
         /// </summary>
-        [Networked] private Vector3 NetworkedVelocity { get; set; }
+        private NetworkVariable<Vector3> NetworkedVelocity = new NetworkVariable<Vector3>(Vector3.zero, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>
         /// Whether this bullet has already hit something.
         /// </summary>
-        [Networked] private NetworkBool HasHit { get; set; }
+        private NetworkVariable<bool> HasHit = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         private PlayerHealthMotif m_shooterPlayerReference;
 
@@ -94,28 +93,27 @@ namespace MRMotifs.Shooting
             if (ConfigDamage > 0) m_damage = ConfigDamage;
 
             // Require serialized fields - no Resources.Load fallbacks
-            // These must be assigned in the bullet prefab Inspector
             DebugLogger.RequireSerializedField(m_hitEffectPrefab, "m_hitEffectPrefab (BulletHole)", this);
             DebugLogger.RequireSerializedField(m_playerHitEffectPrefab, "m_playerHitEffectPrefab (BloodEffect)", this);
             DebugLogger.RequireSerializedField(m_hitSound, "m_hitSound", this);
         }
 
-        public override void Spawned()
+        public override void OnNetworkSpawn()
         {
-            base.Spawned();
+            base.OnNetworkSpawn();
             m_spawnTime = Time.time;
-            HasHit = false;
+            HasHit.Value = false;
             m_previousPosition = transform.position;
             
-            DebugLogger.Bullet($"Spawned | pos={transform.position:F2} vel={NetworkedVelocity:F1} owner={OwnerPlayer} lifetime={m_lifetime:F1}s", this);
+            DebugLogger.Bullet($"Spawned | pos={transform.position:F2} vel={NetworkedVelocity.Value:F1} owner={OwnerPlayer.Value} lifetime={m_lifetime:F1}s", this);
 
             // Resolve shooter reference
-            if (OwnerPlayer != PlayerRef.None)
+            if (OwnerPlayer.Value != 0)
             {
                 var players = FindObjectsByType<PlayerHealthMotif>(FindObjectsSortMode.None);
                 foreach (var player in players)
                 {
-                    if (player.Object != null && player.Object.InputAuthority == OwnerPlayer)
+                    if (player.NetworkObject != null && player.NetworkObject.OwnerClientId == OwnerPlayer.Value)
                     {
                         m_shooterPlayerReference = player;
                         break;
@@ -123,10 +121,10 @@ namespace MRMotifs.Shooting
                 }
             }
 
-            // Apply velocity if we're the authority
-            if (Object.HasStateAuthority && NetworkedVelocity != Vector3.zero)
+            // Apply velocity if we're the owner
+            if (IsOwner && NetworkedVelocity.Value != Vector3.zero)
             {
-                m_rigidbody.linearVelocity = NetworkedVelocity;
+                m_rigidbody.linearVelocity = NetworkedVelocity.Value;
             }
         }
 
@@ -134,10 +132,10 @@ namespace MRMotifs.Shooting
         /// Initialize the bullet with owner, velocity, and lifetime.
         /// Called by ShootingPlayerMotif after spawning.
         /// </summary>
-        public void Initialize(PlayerRef owner, Vector3 velocity, float lifetime)
+        public void Initialize(ulong ownerClientId, Vector3 velocity, float lifetime)
         {
-            OwnerPlayer = owner;
-            NetworkedVelocity = velocity;
+            OwnerPlayer.Value = ownerClientId;
+            NetworkedVelocity.Value = velocity;
             m_lifetime = lifetime;
             m_previousPosition = transform.position;
 
@@ -150,9 +148,9 @@ namespace MRMotifs.Shooting
             StartCoroutine(DespawnAfterLifetime());
         }
 
-    public override void FixedUpdateNetwork()
+        private void FixedUpdate()
         {
-            if (!Object.HasStateAuthority)
+            if (!IsOwner)
             {
                 return;
             }
@@ -171,7 +169,7 @@ namespace MRMotifs.Shooting
             }
 
             // Raycast-based collision detection to catch fast-moving bullet hits
-            if (!HasHit)
+            if (!HasHit.Value)
             {
                 CheckRaycastCollision();
             }
@@ -182,7 +180,6 @@ namespace MRMotifs.Shooting
 
         /// <summary>
         /// Uses raycast to detect collisions between previous and current position.
-        /// This catches collisions that physics triggers might miss due to high bullet speed.
         /// </summary>
         private void CheckRaycastCollision()
         {
@@ -192,83 +189,55 @@ namespace MRMotifs.Shooting
 
             if (distance < 0.001f)
             {
-                return; // Not enough movement to check
+                return;
             }
 
-            // Cast a ray from previous position to current position
-            // Use QueryTriggerInteraction.Collide to hit trigger colliders (avatar colliders are triggers)
             if (Physics.Raycast(m_previousPosition, direction.normalized, out RaycastHit hit, distance, Physics.DefaultRaycastLayers, QueryTriggerInteraction.Collide))
             {
-                // Check if we hit a player
                 var playerHealth = hit.collider.GetComponentInParent<PlayerHealthMotif>();
                 var networkObject = hit.collider.GetComponentInParent<NetworkObject>();
                 
                 bool isOwnAvatar = false;
-                if (networkObject != null && networkObject.InputAuthority == OwnerPlayer)
+                if (networkObject != null && networkObject.OwnerClientId == OwnerPlayer.Value)
                 {
                     isOwnAvatar = true;
                 }
                 
-                // Check if we hit own avatar - wrap in try/catch to handle unspawned NetworkBehaviours
                 if (playerHealth != null)
                 {
-                    try
+                    if (playerHealth.NetworkObject != null && 
+                        (playerHealth.OwnerPlayer.Value == OwnerPlayer.Value || isOwnAvatar))
                     {
-                        // Only check OwnerPlayer if the NetworkBehaviour is spawned
-                        if (playerHealth.Object != null && playerHealth.Object.IsValid && 
-                            (playerHealth.OwnerPlayer == OwnerPlayer || isOwnAvatar))
-                        {
-                            // Hit own avatar, ignore
-                            return;
-                        }
-                    }
-                    catch (System.InvalidOperationException)
-                    {
-                        // PlayerHealth not spawned yet, check via NetworkObject instead
-                        if (isOwnAvatar)
-                        {
-                            return;
-                        }
+                        return;
                     }
                 }
 
-                // Process the hit
-                HasHit = true;
+                HasHit.Value = true;
                 bool hitPlayer = playerHealth != null;
                 
                 if (hitPlayer)
                 {
-                    DebugLogger.Bullet($"HIT PLAYER (raycast) | damage={m_damage} target={hit.collider.gameObject.name} attacker={OwnerPlayer}", this);
-                    playerHealth.ApplyDamageLocal(m_damage, OwnerPlayer);
-                }
-                else if (IsWallCollision(hit.collider.gameObject))
-                {
-                    DebugLogger.Bullet($"Hit wall (raycast) | object={hit.collider.gameObject.name} layer={LayerMask.LayerToName(hit.collider.gameObject.layer)}", this);
-                }
-                else
-                {
-                    DebugLogger.Bullet($"Hit environment (raycast) | object={hit.collider.gameObject.name}", this);
+                    DebugLogger.Bullet($"HIT PLAYER (raycast) | damage={m_damage} target={hit.collider.gameObject.name} attacker={OwnerPlayer.Value}", this);
+                    playerHealth.ApplyDamageLocal(m_damage, OwnerPlayer.Value);
                 }
 
-                SpawnHitEffectRpc(hit.point, hit.normal, hitPlayer, false);
+                RequestSpawnHitEffectServerRpc(hit.point, hit.normal, hitPlayer, false);
                 DespawnBullet();
             }
         }
 
         private void OnCollisionEnter(Collision collision)
         {
-            // Guard against Object being null before NetworkBehaviour is fully spawned
-            if (Object == null || !Object.IsValid)
+            if (NetworkObject == null || !IsSpawned)
             {
                 return;
             }
             
-            if (!Object.HasStateAuthority || HasHit)
+            if (!IsOwner || HasHit.Value)
             {
                 return;
             }
             
-            // Guard against no contact points
             if (collision.contactCount == 0)
             {
                 return;
@@ -278,145 +247,107 @@ namespace MRMotifs.Shooting
             var impactPoint = contact.point;
             var impactNormal = contact.normal;
 
-            // Check if we hit another bullet
             if (collision.gameObject.CompareTag("Bullet"))
             {
                 HandleBulletCollision(impactPoint, collision);
                 return;
             }
 
-            // Check if we hit a player
             var damageable = collision.gameObject.GetComponentInParent<IDamageable>();
             var networkObject = collision.gameObject.GetComponentInParent<NetworkObject>();
 
-            // Check if we hit our own avatar
             bool isOwnAvatar = false;
-            if (networkObject != null && networkObject.InputAuthority == OwnerPlayer)
+            if (networkObject != null && networkObject.OwnerClientId == OwnerPlayer.Value)
             {
                 isOwnAvatar = true;
             }
 
             if (damageable != null)
             {
-                // Don't damage ourselves
                 var playerHealth = damageable as PlayerHealthMotif;
-                if (playerHealth == null || (playerHealth.OwnerPlayer != OwnerPlayer && !isOwnAvatar))
+                if (playerHealth == null || (playerHealth.OwnerPlayer.Value != OwnerPlayer.Value && !isOwnAvatar))
                 {
                     HandleAvatarImpact(impactPoint, impactNormal, damageable);
                     return;
                 }
                 else
                 {
-                    // Hit our own avatar, ignore
                     return;
                 }
             }
 
-            // Check if we hit a wall/room mesh
             if (IsWallCollision(collision.gameObject))
             {
                 HandleWallImpact(impactPoint, impactNormal, collision);
                 return;
             }
 
-            // Generic environment collision
             HandleGenericImpact(impactPoint, impactNormal);
         }
 
-        /// <summary>
-        /// Check if the collision is with a wall/room mesh.
-        /// </summary>
         private bool IsWallCollision(GameObject obj)
         {
             bool hasTag = obj.CompareTag("RoomMesh");
             bool hasLayer = ((1 << obj.layer) & m_wallLayers) != 0;
-            
-            if (hasTag || hasLayer)
-            {
-                DebugLogger.Bullet($"Wall detected | object={obj.name} tag={obj.tag} layer={LayerMask.LayerToName(obj.layer)}", this);
-            }
-            
             return hasTag || hasLayer;
         }
 
-        /// <summary>
-        /// Handle bullet-to-bullet collision.
-        /// </summary>
         private void HandleBulletCollision(Vector3 point, Collision collision)
         {
             if (m_bulletCollisionVFXPrefab != null)
             {
-                SpawnHitEffectRpc(point, Vector3.up, false, true);
+                RequestSpawnHitEffectServerRpc(point, Vector3.up, false, true);
             }
             else
             {
-                SpawnHitEffectRpc(point, Vector3.up, false, false);
+                RequestSpawnHitEffectServerRpc(point, Vector3.up, false, false);
             }
             
-            HasHit = true;
+            HasHit.Value = true;
             DespawnBullet();
         }
 
-        /// <summary>
-        /// Handle wall impact with optional ricochet.
-        /// </summary>
         private void HandleWallImpact(Vector3 point, Vector3 normal, Collision collision)
         {
-            // Guard against null rigidbody
             if (m_rigidbody == null)
             {
-                HasHit = true;
-                SpawnHitEffectRpc(point, normal, false, false);
+                HasHit.Value = true;
+                RequestSpawnHitEffectServerRpc(point, normal, false, false);
                 DespawnBullet();
                 return;
             }
             
-            // Check for ricochet based on impact angle
             float impactAngle = Vector3.Angle(-m_rigidbody.linearVelocity.normalized, normal);
             
-            if (impactAngle < m_ricochetAngleThreshold && UnityEngine.Random.value < m_ricochetChance)
+            if (impactAngle < m_ricochetAngleThreshold && Random.value < m_ricochetChance)
             {
-                // Ricochet! Reflect velocity
                 Vector3 reflectedVelocity = Vector3.Reflect(m_rigidbody.linearVelocity, normal);
                 m_rigidbody.linearVelocity = reflectedVelocity * m_ricochetEnergyMultiplier;
-                
-                // Spawn smaller ricochet spark
-                SpawnHitEffectRpc(point, normal, false, false);
-                
-                Debug.Log($"[BulletMotif] Bullet ricocheted at angle {impactAngle}°");
-                // Don't set HasHit or despawn - bullet continues
+                RequestSpawnHitEffectServerRpc(point, normal, false, false);
             }
             else
             {
-                // Full impact - destroy bullet
-                HasHit = true;
-                SpawnHitEffectRpc(point, normal, false, false);
+                HasHit.Value = true;
+                RequestSpawnHitEffectServerRpc(point, normal, false, false);
                 DespawnBullet();
             }
         }
 
-        /// <summary>
-        /// Handle avatar/player impact.
-        /// </summary>
         private void HandleAvatarImpact(Vector3 point, Vector3 normal, IDamageable damageable)
         {
-            HasHit = true;
+            HasHit.Value = true;
             
-            // Create damage callback to track kills/hits
             IDamageable.DamageCallback damageCallback = (affected, damage, died) =>
             {
-                // Track drone kill if target died
                 if (died && affected is DroneMotif)
                 {
                     var shooterStats = m_shooterPlayerReference?.PlayerStats;
                     if (shooterStats != null)
                     {
                         shooterStats.AddDroneKill();
-                        DebugLogger.Shooting($"Player {m_shooterPlayerReference.name} killed drone", this);
                     }
                 }
                 
-                // Track hit for accuracy
                 var shooterPlayerStats = m_shooterPlayerReference?.PlayerStats;
                 if (shooterPlayerStats != null)
                 {
@@ -424,55 +355,39 @@ namespace MRMotifs.Shooting
                 }
             };
             
-            // Apply damage through IDamageable interface
             damageable.TakeDamage(m_damage, point, normal, damageCallback);
-            
-            // Spawn player hit effect
-            SpawnHitEffectRpc(point, normal, true, false);
+            RequestSpawnHitEffectServerRpc(point, normal, true, false);
             DespawnBullet();
         }
 
-        /// <summary>
-        /// Handle generic environment impact.
-        /// </summary>
         private void HandleGenericImpact(Vector3 point, Vector3 normal)
         {
-            HasHit = true;
-            SpawnHitEffectRpc(point, normal, false, false);
+            HasHit.Value = true;
+            RequestSpawnHitEffectServerRpc(point, normal, false, false);
             DespawnBullet();
         }
 
         private void OnTriggerEnter(Collider other)
         {
-            // Guard against Object being null before NetworkBehaviour is fully spawned
-            if (Object == null || !Object.IsValid)
-            {
-                return;
-            }
-            
-            DebugLogger.Bullet($"Trigger | object={other.gameObject.name} auth={Object.HasStateAuthority} hasHit={HasHit}", this);
-
-            if (!Object.HasStateAuthority || HasHit)
+            if (NetworkObject == null || !IsSpawned)
             {
                 return;
             }
 
-            // Check if we hit a player by looking for PlayerHealthMotif or NetworkObject
+            if (!IsOwner || HasHit.Value)
+            {
+                return;
+            }
+
             var playerHealth = other.GetComponentInParent<PlayerHealthMotif>();
             var networkObject = other.GetComponentInParent<NetworkObject>();
-            
-            DebugLogger.Bullet($"Trigger check | playerHealth={playerHealth != null} networkObj={networkObject != null}", this);
             
             bool hitPlayer = false;
             bool isOwnAvatar = false;
 
-            // Determine if this is the bullet owner's own avatar
             if (networkObject != null)
             {
-                DebugLogger.Bullet($"Owner check | inputAuth={networkObject.InputAuthority} bulletOwner={OwnerPlayer}", this);
-                
-                // Better check: compare input authority with bullet owner
-                if (networkObject.InputAuthority == OwnerPlayer)
+                if (networkObject.OwnerClientId == OwnerPlayer.Value)
                 {
                     isOwnAvatar = true;
                 }
@@ -480,42 +395,35 @@ namespace MRMotifs.Shooting
             
             if (playerHealth != null)
             {
-                DebugLogger.Bullet($"Player check | healthOwner={playerHealth.OwnerPlayer} bulletOwner={OwnerPlayer} isOwn={isOwnAvatar}", this);
-                
-                // Use both checks - OwnerPlayer or InputAuthority
-                if (playerHealth.OwnerPlayer == OwnerPlayer || isOwnAvatar)
+                if (playerHealth.OwnerPlayer.Value == OwnerPlayer.Value || isOwnAvatar)
                 {
-                    // Hit our own collider - ignore and continue
-                    DebugLogger.Bullet("Ignored own avatar", this);
                     return;
                 }
                 
-                DebugLogger.Bullet($"HIT PLAYER (trigger) | damage={m_damage} attacker={OwnerPlayer}", this);
-                // Apply damage directly (local) since PlayerHealthMotif may not have working RPCs
-                playerHealth.ApplyDamageLocal(m_damage, OwnerPlayer);
+                playerHealth.ApplyDamageLocal(m_damage, OwnerPlayer.Value);
                 hitPlayer = true;
             }
             else if (isOwnAvatar)
             {
-                // Hit own avatar but no PlayerHealth found - still ignore
-                DebugLogger.Bullet("Ignored own avatar (no health component)", this);
                 return;
             }
 
-            HasHit = true;
-
-            // Spawn hit effect and despawn
-            DebugLogger.Bullet($"Despawning | hitPlayer={hitPlayer}", this);
-            SpawnHitEffectRpc(transform.position, -transform.forward, hitPlayer, false);
+            HasHit.Value = true;
+            RequestSpawnHitEffectServerRpc(transform.position, -transform.forward, hitPlayer, false);
             DespawnBullet();
         }
 
-        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-        private void SpawnHitEffectRpc(Vector3 position, Vector3 normal, NetworkBool isPlayerHit, NetworkBool isBulletCollision)
+        [ServerRpc]
+        private void RequestSpawnHitEffectServerRpc(Vector3 position, Vector3 normal, bool isPlayerHit, bool isBulletCollision)
+        {
+            SpawnHitEffectClientRpc(position, normal, isPlayerHit, isBulletCollision);
+        }
+
+        [ClientRpc]
+        private void SpawnHitEffectClientRpc(Vector3 position, Vector3 normal, bool isPlayerHit, bool isBulletCollision)
         {
             GameObject effectPrefab;
             
-            // Choose appropriate effect
             if (isBulletCollision && m_bulletCollisionVFXPrefab != null)
             {
                 effectPrefab = m_bulletCollisionVFXPrefab;
@@ -549,7 +457,7 @@ namespace MRMotifs.Shooting
         {
             yield return new WaitForSeconds(m_lifetime);
 
-            if (Object != null && Object.IsValid && Object.HasStateAuthority)
+            if (NetworkObject != null && IsSpawned && IsOwner)
             {
                 DespawnBullet();
             }
@@ -557,9 +465,23 @@ namespace MRMotifs.Shooting
 
         private void DespawnBullet()
         {
-            if (Object != null && Object.IsValid && Runner != null)
+            if (NetworkObject != null && IsSpawned && IsServer)
             {
-                Runner.Despawn(Object);
+                NetworkObject.Despawn();
+            }
+            else if (IsOwner && NetworkManager.Singleton != null)
+            {
+                // Request server to despawn
+                RequestDespawnServerRpc();
+            }
+        }
+
+        [ServerRpc]
+        private void RequestDespawnServerRpc()
+        {
+            if (NetworkObject != null && IsSpawned)
+            {
+                NetworkObject.Despawn();
             }
         }
 
@@ -572,4 +494,3 @@ namespace MRMotifs.Shooting
         }
     }
 }
-#endif

@@ -1,6 +1,4 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-
-#if FUSION2
 using UnityEngine;
 using Meta.XR.Samples;
 
@@ -114,7 +112,7 @@ namespace MRMotifs.Shooting
             PlayClip(m_roundStartClip);
         }
 
-        private void OnRoundEnded(Fusion.PlayerRef winner)
+        private void OnRoundEnded(ulong winner)
         {
             PlayClip(m_roundEndClip);
         }
@@ -191,4 +189,3 @@ namespace MRMotifs.Shooting
         private static ShootingAudioMotif s_instance;
     }
 }
-#endif

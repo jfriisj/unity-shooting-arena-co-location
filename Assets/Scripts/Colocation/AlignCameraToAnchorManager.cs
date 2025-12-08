@@ -1,6 +1,4 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-
-#if FUSION2
 using UnityEngine;
 using System.Threading.Tasks;
 using Meta.XR.Samples;
@@ -28,6 +26,16 @@ namespace MRMotifs.ColocatedExperiences.Colocation
 
         private void OnEnable()
         {
+            // Auto-find ColocationManager if not set
+            if (ColocationManager == null)
+            {
+                ColocationManager = GetComponent<ColocationManager>();
+                if (ColocationManager == null)
+                {
+                    ColocationManager = FindAnyObjectByType<ColocationManager>();
+                }
+            }
+
             // Subscribe to recenter events
             if (OVRManager.display != null)
             {
@@ -100,4 +108,3 @@ namespace MRMotifs.ColocatedExperiences.Colocation
         }
     }
 }
-#endif

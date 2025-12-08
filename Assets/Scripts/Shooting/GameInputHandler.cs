@@ -1,6 +1,4 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-
-#if FUSION2
 using UnityEngine;
 using Meta.XR.Samples;
 
@@ -85,7 +83,7 @@ namespace MRMotifs.Shooting
             // Handle the restart request based on current game state
             if (m_gameManager == null) return;
 
-            switch (m_gameManager.CurrentGameState)
+            switch (m_gameManager.CurrentGameState.Value)
             {
                 case ShootingGameManagerMotif.GameState.RoundEnd:
                     m_gameManager.RestartRound();
@@ -145,4 +143,3 @@ namespace MRMotifs.Shooting
         }
     }
 }
-#endif

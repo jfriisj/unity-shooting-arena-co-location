@@ -7,7 +7,7 @@ using Oculus.Platform;
 using Oculus.Platform.BuildingBlocks;
 using UnityEngine.SceneManagement;
 
-namespace MRMotifs.SharedActivities.QuestPlatform
+namespace MRMotifs.Shooting.Platform
 {
     /// <summary>
     /// The InvitationAcceptanceHandlerMotif class handles deep link invitations using the Oculus Platform SDK.

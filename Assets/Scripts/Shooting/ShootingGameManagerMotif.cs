@@ -1,10 +1,8 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
 
-#if FUSION2
-using Fusion;
+using Unity.Netcode;
 using UnityEngine;
 using System.Collections.Generic;
-using TMPro;
 using Meta.XR.Samples;
 
 namespace MRMotifs.Shooting
@@ -12,32 +10,12 @@ namespace MRMotifs.Shooting
     /// <summary>
     /// Manages the shooting game state, including round management,
     /// scoring, and UI updates. Coordinates between all players.
+    /// Converted from Photon Fusion to Unity NGO.
     /// </summary>
     [MetaCodeSample("MRMotifs-SharedActivities")]
     public class ShootingGameManagerMotif : NetworkBehaviour
     {
-        [Header("Game Settings")]
-        [Tooltip("Duration of each round in seconds.")]
-        [SerializeField] private float m_roundDuration = 180f;
-
-        [Tooltip("Number of kills needed to win.")]
-        [SerializeField] private int m_killsToWin = 10;
-
-        [Tooltip("Minimum players required to start.")]
-        [SerializeField] private int m_minPlayersToStart = 2;
-
-        [Tooltip("Delay before automatically starting a new round after round end.")]
-        [SerializeField] private float m_autoRestartDelay = 10f;
-
-        [Tooltip("Whether to automatically restart rounds.")]
-        [SerializeField] private bool m_autoRestart = true;
-
-        // UI and scoreboard now handled by separate components:
-        // - GameStateUIHandler manages status/timer text
-        // - ScoreboardManagerMotif manages scoreboard panel
-        // - GameInputHandler manages restart input
-
-        // Audio now handled by ShootingAudioMotif via event bus
+        private ShootingGameConfigMotif m_config;
 
         /// <summary>
         /// Current game state.
@@ -53,50 +31,67 @@ namespace MRMotifs.Shooting
         /// <summary>
         /// Networked game state.
         /// </summary>
-        [Networked, OnChangedRender(nameof(OnGameStateChanged))]
-        public GameState CurrentGameState { get; set; }
+        public NetworkVariable<GameState> CurrentGameState = new NetworkVariable<GameState>(
+            GameState.WaitingForPlayers,
+            NetworkVariableReadPermission.Everyone,
+            NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// Remaining time in the current round.
         /// </summary>
-        [Networked, OnChangedRender(nameof(OnTimerChanged))]
-        public float RemainingTime { get; set; }
+        public NetworkVariable<float> RemainingTime = new NetworkVariable<float>(
+            180f,
+            NetworkVariableReadPermission.Everyone,
+            NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// Countdown before round starts.
         /// </summary>
-        [Networked, OnChangedRender(nameof(OnCountdownChanged))]
-        public int CountdownValue { get; set; }
+        public NetworkVariable<int> CountdownValue = new NetworkVariable<int>(
+            0,
+            NetworkVariableReadPermission.Everyone,
+            NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// Player scores synchronized across clients.
         /// Each entry is packed as: PlayerId * 1000000 + Kills * 1000 + Deaths
         /// </summary>
-        [Networked, Capacity(8)]
-        private NetworkArray<int> PackedPlayerScores => default;
+        public NetworkList<int> PackedPlayerScores;
 
         private readonly List<PlayerHealthMotif> m_players = new();
         private float m_roundEndTime;
-        // Input handling now in GameInputHandler
-        // Scoreboard entries now in ScoreboardManagerMotif
-        // Audio source now in ShootingAudioMotif
+        private float m_lastCountdownTick;
 
         private void Awake()
         {
-            // Prevent device from sleeping to avoid "crashes" when user is inactive (e.g. waiting for round reset)
+            // Prevent device from sleeping
             Screen.sleepTimeout = SleepTimeout.NeverSleep;
+
+            m_config = GetComponent<ShootingGameConfigMotif>();
+            if (m_config == null)
+            {
+                Debug.LogError("ShootingGameConfigMotif not found on ShootingGameManagerMotif!");
+            }
+
+            // Initialize NetworkList
+            PackedPlayerScores = new NetworkList<int>();
         }
 
-        public override void Spawned()
+        public override void OnNetworkSpawn()
         {
-            base.Spawned();
+            base.OnNetworkSpawn();
 
-            if (Object.HasStateAuthority)
+            // Subscribe to value changes for all clients
+            CurrentGameState.OnValueChanged += OnGameStateChanged;
+            RemainingTime.OnValueChanged += OnTimerChanged;
+            CountdownValue.OnValueChanged += OnCountdownChanged;
+
+            if (IsServer)
             {
-                CurrentGameState = GameState.WaitingForPlayers;
-                RemainingTime = m_roundDuration;
+                CurrentGameState.Value = GameState.WaitingForPlayers;
+                RemainingTime.Value = m_config != null ? m_config.roundDuration : 180f;
                 
-                // Subscribe to restart requests from GameInputHandler
+                // Subscribe to restart requests
                 GameStateEventBus.OnRestartRequested += OnRestartRequested;
             }
 
@@ -104,17 +99,36 @@ namespace MRMotifs.Shooting
             RefreshPlayerList();
         }
 
-        private void OnDestroy()
+        public override void OnNetworkDespawn()
         {
-            // Unsubscribe from events
+            base.OnNetworkDespawn();
+
+            CurrentGameState.OnValueChanged -= OnGameStateChanged;
+            RemainingTime.OnValueChanged -= OnTimerChanged;
+            CountdownValue.OnValueChanged -= OnCountdownChanged;
             GameStateEventBus.OnRestartRequested -= OnRestartRequested;
+        }
+
+        private void OnGameStateChanged(GameState previousValue, GameState newValue)
+        {
+            GameStateEventBus.FireGameStateChanged(previousValue, newValue);
+        }
+
+        private void OnTimerChanged(float previousValue, float newValue)
+        {
+            GameStateEventBus.FireTimerUpdated(newValue);
+        }
+
+        private void OnCountdownChanged(int previousValue, int newValue)
+        {
+            GameStateEventBus.FireCountdownTick(newValue);
         }
 
         private void OnRestartRequested()
         {
-            if (!Object.HasStateAuthority) return;
+            if (!IsServer) return;
 
-            switch (CurrentGameState)
+            switch (CurrentGameState.Value)
             {
                 case GameState.RoundEnd:
                     RestartRound();
@@ -125,22 +139,14 @@ namespace MRMotifs.Shooting
             }
         }
 
-        private void Update()
+        private void FixedUpdate()
         {
-            // Input handling now done by GameInputHandler
-            // Auto-restart countdown display now handled by GameStateUIHandler
-        }
-
-
-
-        public override void FixedUpdateNetwork()
-        {
-            if (!Object.HasStateAuthority)
+            if (!IsServer)
             {
                 return;
             }
 
-            switch (CurrentGameState)
+            switch (CurrentGameState.Value)
             {
                 case GameState.WaitingForPlayers:
                     CheckForMinPlayers();
@@ -157,7 +163,7 @@ namespace MRMotifs.Shooting
 
                 case GameState.RoundEnd:
                     // Auto-restart after delay if enabled
-                    if (m_autoRestart && Time.time >= m_roundEndTime + m_autoRestartDelay)
+                    if (m_config != null && m_config.autoRestart && Time.time >= m_roundEndTime + m_config.autoRestartDelay)
                     {
                         RestartRound();
                     }
@@ -178,9 +184,9 @@ namespace MRMotifs.Shooting
         {
             RefreshPlayerList();
 
-            // Count active players from Fusion's network runner
+            // Count active players from NetworkManager
             int activePlayerCount = GetActivePlayerCount();
-            if (activePlayerCount >= m_minPlayersToStart)
+            if (activePlayerCount >= (m_config != null ? m_config.minPlayersToStart : 2))
             {
                 StartCountdown();
             }
@@ -188,38 +194,33 @@ namespace MRMotifs.Shooting
 
         private int GetActivePlayerCount()
         {
-            if (Runner == null) return 0;
-            
-            int count = 0;
-            foreach (var _ in Runner.ActivePlayers)
-            {
-                count++;
-            }
-            return count;
+            if (NetworkManager.Singleton == null) return 0;
+            return NetworkManager.Singleton.ConnectedClientsIds.Count;
         }
 
         private void StartCountdown()
         {
-            var oldState = CurrentGameState;
-            CurrentGameState = GameState.Countdown;
-            CountdownValue = 5;
+            var oldState = CurrentGameState.Value;
+            CurrentGameState.Value = GameState.Countdown;
+            CountdownValue.Value = m_config != null ? m_config.countdownDuration : 5;
+            m_lastCountdownTick = Time.time;
             
             // Fire event for state change
-            GameStateEventBus.FireGameStateChanged(oldState, CurrentGameState);
+            GameStateEventBus.FireGameStateChanged(oldState, CurrentGameState.Value);
         }
 
         private void UpdateCountdown()
         {
-            // Countdown is handled in FixedUpdateNetwork ticks
-            // Decrease every ~60 ticks (1 second at 60 tick rate)
-            if (Runner.Tick % 60 == 0 && CountdownValue > 0)
+            // Decrease every 1 second
+            if (Time.time - m_lastCountdownTick >= 1f && CountdownValue.Value > 0)
             {
-                CountdownValue--;
+                m_lastCountdownTick = Time.time;
+                CountdownValue.Value--;
                 
                 // Fire countdown tick event
-                GameStateEventBus.FireCountdownTick(CountdownValue);
+                GameStateEventBus.FireCountdownTick(CountdownValue.Value);
 
-                if (CountdownValue <= 0)
+                if (CountdownValue.Value <= 0)
                 {
                     StartRound();
                 }
@@ -228,34 +229,34 @@ namespace MRMotifs.Shooting
 
         private void StartRound()
         {
-            var oldState = CurrentGameState;
-            CurrentGameState = GameState.Playing;
-            RemainingTime = m_roundDuration;
+            var oldState = CurrentGameState.Value;
+            CurrentGameState.Value = GameState.Playing;
+            RemainingTime.Value = m_config != null ? m_config.roundDuration : 180f;
 
             // Reset all player stats
             foreach (var player in m_players)
             {
-                if (player != null && player.Object != null && player.Object.IsValid)
+                if (player != null && player.NetworkObject != null && player.NetworkObject.IsSpawned)
                 {
                     player.ResetStats();
                 }
             }
 
             // Fire events
-            GameStateEventBus.FireGameStateChanged(oldState, CurrentGameState);
+            GameStateEventBus.FireGameStateChanged(oldState, CurrentGameState.Value);
             GameStateEventBus.FireRoundStarted();
         }
 
         private void UpdateRoundTimer()
         {
-            RemainingTime -= Runner.DeltaTime;
+            RemainingTime.Value -= Time.fixedDeltaTime;
             
             // Fire timer update event
-            GameStateEventBus.FireTimerUpdated(RemainingTime);
+            GameStateEventBus.FireTimerUpdated(RemainingTime.Value);
 
-            if (RemainingTime <= 0)
+            if (RemainingTime.Value <= 0)
             {
-                EndRound(PlayerRef.None);
+                EndRound(ulong.MaxValue); // No winner
             }
         }
 
@@ -264,73 +265,79 @@ namespace MRMotifs.Shooting
             foreach (var player in m_players)
             {
                 // Skip players that aren't fully spawned yet
-                if (player == null || player.Object == null || !player.Object.IsValid)
+                if (player == null || player.NetworkObject == null || !player.NetworkObject.IsSpawned)
                 {
                     continue;
                 }
                 
-                if (player.Kills >= m_killsToWin)
+                if (player.Kills >= (m_config != null ? m_config.killsToWin : 10))
                 {
-                    EndRound(player.OwnerPlayer);
+                    EndRound(player.OwnerPlayer.Value);
                     return;
                 }
             }
         }
 
-        private void EndRound(PlayerRef winner)
+        private void EndRound(ulong winner)
         {
-            var oldState = CurrentGameState;
-            CurrentGameState = GameState.RoundEnd;
+            var oldState = CurrentGameState.Value;
+            CurrentGameState.Value = GameState.RoundEnd;
             m_roundEndTime = Time.time;
             
             // Fire events
-            GameStateEventBus.FireGameStateChanged(oldState, CurrentGameState);
-            GameStateEventBus.FireRoundEnded(winner);
+            GameStateEventBus.FireGameStateChanged(oldState, CurrentGameState.Value);
+            GameStateEventBus.FireRoundEndedNGO(winner);
             
-            AnnounceWinnerRpc(winner, m_autoRestart ? m_autoRestartDelay : -1f);
+            AnnounceWinnerClientRpc(winner, (m_config != null && m_config.autoRestart) ? m_config.autoRestartDelay : -1f);
         }
 
         private void UpdatePlayerScores()
         {
-            for (var i = 0; i < m_players.Count && i < PackedPlayerScores.Length; i++)
+            // Ensure list is sized correctly
+            while (PackedPlayerScores.Count < m_players.Count)
+            {
+                PackedPlayerScores.Add(0);
+            }
+
+            for (var i = 0; i < m_players.Count && i < PackedPlayerScores.Count; i++)
             {
                 var player = m_players[i];
                 // Skip players that aren't fully spawned yet
-                if (player == null || player.Object == null || !player.Object.IsValid)
+                if (player == null || player.NetworkObject == null || !player.NetworkObject.IsSpawned)
                 {
                     continue;
                 }
                 // Pack: PlayerId * 1000000 + Kills * 1000 + Deaths
-                var packed = player.OwnerPlayer.PlayerId * 1000000 + player.Kills * 1000 + player.Deaths;
-                _ = PackedPlayerScores.Set(i, packed);
+                var packed = (int)player.OwnerPlayer.Value * 1000000 + player.Kills * 1000 + player.Deaths;
+                PackedPlayerScores[i] = packed;
             }
         }
 
-        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-        private void AnnounceWinnerRpc(PlayerRef winner, float restartDelay)
+        [ClientRpc]
+        private void AnnounceWinnerClientRpc(ulong winner, float restartDelay)
         {
-            var winnerText = winner == PlayerRef.None 
+            var winnerText = winner == ulong.MaxValue 
                 ? "Time's Up! Round Over" 
-                : $"Player {winner.PlayerId} Wins!";
+                : $"Player {winner} Wins!";
             
             if (restartDelay > 0)
             {
                 winnerText += $"\nNew round in {restartDelay:F0}s...";
             }
             
-            // Fire winner announcement event instead of direct UI manipulation
+            // Fire winner announcement event
             GameStateEventBus.FireWinnerAnnounced(winnerText);
         }
 
         /// <summary>
-        /// Call to restart the round (host only).
+        /// Call to restart the round (server only).
         /// </summary>
         public void RestartRound()
         {
-            if (!Object.HasStateAuthority)
+            if (!IsServer)
             {
-                // If not host, request restart via RPC
-                RequestRestartRpc();
+                // If not server, request restart via RPC
+                RequestRestartServerRpc();
                 return;
             }
 
@@ -340,14 +347,14 @@ namespace MRMotifs.Shooting
             RefreshPlayerList();
             foreach (var player in m_players)
             {
-                if (player != null && player.Object != null && player.Object.IsValid)
+                if (player != null && player.NetworkObject != null && player.NetworkObject.IsSpawned)
                 {
                     player.ResetStats();
                 }
             }
 
             // Announce restart to all clients
-            OnRoundRestartRpc();
+            OnRoundRestartClientRpc();
 
             // Start countdown for new round
             StartCountdown();
@@ -358,80 +365,62 @@ namespace MRMotifs.Shooting
         /// </summary>
         public void ResetCurrentRound()
         {
-            if (!Object.HasStateAuthority)
+            if (!IsServer)
             {
-                RequestResetRpc();
+                RequestResetServerRpc();
                 return;
             }
 
             Debug.Log("[ShootingGameManager] Resetting current round...");
             
             // Reset timer
-            RemainingTime = m_roundDuration;
+            RemainingTime.Value = m_config != null ? m_config.roundDuration : 180f;
 
             // Reset all player stats but keep playing
             RefreshPlayerList();
             foreach (var player in m_players)
             {
-                if (player != null && player.Object != null && player.Object.IsValid)
+                if (player != null && player.NetworkObject != null && player.NetworkObject.IsSpawned)
                 {
                     player.ResetStats();
                 }
             }
 
             // Announce reset
-            OnRoundResetRpc();
+            OnRoundResetClientRpc();
 
             // If not already playing, start countdown
-            if (CurrentGameState != GameState.Playing)
+            if (CurrentGameState.Value != GameState.Playing)
             {
                 StartCountdown();
             }
         }
 
-        /// <summary>
-        /// RPC for clients to request a round restart from the host.
-        /// </summary>
-        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-        private void RequestRestartRpc()
+        [ServerRpc(RequireOwnership = false)]
+        private void RequestRestartServerRpc()
         {
             Debug.Log("[ShootingGameManager] Restart requested by client");
             RestartRound();
         }
 
-        /// <summary>
-        /// RPC for clients to request a round reset from the host.
-        /// </summary>
-        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-        private void RequestResetRpc()
+        [ServerRpc(RequireOwnership = false)]
+        private void RequestResetServerRpc()
         {
             Debug.Log("[ShootingGameManager] Reset requested by client");
             ResetCurrentRound();
         }
 
-        /// <summary>
-        /// Notify all clients that the round is restarting.
-        /// </summary>
-        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-        private void OnRoundRestartRpc()
+        [ClientRpc]
+        private void OnRoundRestartClientRpc()
         {
             Debug.Log("[ShootingGameManager] Round restarting...");
-            // UI updates now handled by GameStateUIHandler via events
         }
 
-        /// <summary>
-        /// Notify all clients that the round has been reset.
-        /// </summary>
-        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-        private void OnRoundResetRpc()
+        [ClientRpc]
+        private void OnRoundResetClientRpc()
         {
             Debug.Log("[ShootingGameManager] Round reset!");
-            // UI updates now handled by GameStateUIHandler via events
         }
-
-
-
-        // Scoreboard management now handled by ScoreboardManagerMotif
 
         /// <summary>
         /// Register a new player with the game manager.
@@ -453,4 +442,3 @@ namespace MRMotifs.Shooting
         }
     }
 }
-#endif

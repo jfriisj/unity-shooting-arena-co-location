@@ -1,7 +1,6 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
 
-#if FUSION2
-using Fusion;
+using Unity.Netcode;
 using UnityEngine;
 using System;
 using System.Collections;
@@ -57,26 +56,22 @@ namespace MRMotifs.Shooting
         /// <summary>
         /// Current health, synchronized across all clients.
         /// </summary>
-        [Networked, OnChangedRender(nameof(OnHealthChanged))]
-        public int CurrentHealth { get; set; }
+        public NetworkVariable<int> CurrentHealth = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>
         /// Whether the player is currently dead.
         /// </summary>
-        [Networked, OnChangedRender(nameof(OnDeadStateChanged))]
-        public NetworkBool IsDead { get; set; }
+        public NetworkVariable<bool> IsDead = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>
         /// Whether the player is currently invulnerable (after respawn).
         /// </summary>
-        [Networked]
-        public NetworkBool IsInvulnerable { get; set; }
+        public NetworkVariable<bool> IsInvulnerable = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>
         /// The player who owns this health component.
         /// </summary>
-        [Networked]
-        public PlayerRef OwnerPlayer { get; set; }
+        public NetworkVariable<ulong> OwnerPlayer = new NetworkVariable<ulong>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
 
         /// <summary>
         /// Reference to player statistics component.
@@ -87,22 +82,20 @@ namespace MRMotifs.Shooting
         /// Number of kills this player has (for backwards compatibility).
         /// Use PlayerStats.Kills instead.
         /// </summary>
-        [Networked, OnChangedRender(nameof(OnScoreChanged))]
         public int Kills 
         { 
-            get => PlayerStats != null ? PlayerStats.Kills : 0;
-            set { if (PlayerStats != null) PlayerStats.Kills = value; }
+            get => PlayerStats != null ? PlayerStats.Kills.Value : 0;
+            set { if (PlayerStats != null) PlayerStats.Kills.Value = value; }
         }
 
         /// <summary>
         /// Number of deaths this player has (for backwards compatibility).
         /// Use PlayerStats.Deaths instead.
         /// </summary>
-        [Networked, OnChangedRender(nameof(OnScoreChanged))]
         public int Deaths 
         { 
-            get => PlayerStats != null ? PlayerStats.Deaths : 0;
-            set { if (PlayerStats != null) PlayerStats.Deaths = value; }
+            get => PlayerStats != null ? PlayerStats.Deaths.Value : 0;
+            set { if (PlayerStats != null) PlayerStats.Deaths.Value = value; }
         }
 
         /// <summary>
@@ -111,9 +104,9 @@ namespace MRMotifs.Shooting
         public event Action<int, int> OnHealthUpdated;
 
         /// <summary>
-        /// Event fired when the player dies. Parameter: killer PlayerRef
+        /// Event fired when the player dies. Parameter: killer client ID
         /// </summary>
-        public event Action<PlayerRef> OnPlayerDied;
+        public event Action<ulong> OnPlayerDied;
 
         /// <summary>
         /// Event fired when the player respawns.
@@ -130,7 +123,7 @@ namespace MRMotifs.Shooting
         private Transform m_spawnPoint;
 
         // Health state - uses local tracking because this component is added via AddComponent
-        // at runtime, so Fusion's [Networked] properties don't work. This is intentional.
+        // at runtime, so networked properties don't work. This is intentional.
         private int m_currentHealth;
         private bool m_isDead;
         private bool m_isInvulnerable;
@@ -167,9 +160,9 @@ namespace MRMotifs.Shooting
             DebugLogger.Health($"Awake | maxHealth={m_maxHealth} networkObject={(m_networkObject != null ? "found" : "NOT FOUND")}", this);
         }
 
-        public override void Spawned()
+        public override void OnNetworkSpawn()
         {
-            base.Spawned();
+            base.OnNetworkSpawn();
 
             // Apply static config if set
             if (ConfigMaxHealth > 0) m_maxHealth = ConfigMaxHealth;
@@ -181,20 +174,24 @@ namespace MRMotifs.Shooting
             m_isDead = false;
             m_isInvulnerable = false;
 
-            if (Object.HasStateAuthority)
+            if (IsOwner)
             {
-                OwnerPlayer = Runner.LocalPlayer;
-                CurrentHealth = m_maxHealth;
-                IsDead = false;
-                IsInvulnerable = false;
+                OwnerPlayer.Value = NetworkManager.Singleton.LocalClientId;
+                CurrentHealth.Value = m_maxHealth;
+                IsDead.Value = false;
+                IsInvulnerable.Value = false;
                 Kills = 0;
                 Deaths = 0;
             }
 
+            // Subscribe to NetworkVariable changes
+            CurrentHealth.OnValueChanged += OnHealthValueChanged;
+            IsDead.OnValueChanged += OnDeadValueChanged;
+
             // Fire initial health event
             OnHealthUpdated?.Invoke(m_currentHealth, m_maxHealth);
 
-            DebugLogger.Health($"Spawned | maxHealth={m_maxHealth} currentHealth={m_currentHealth} hasAuthority={Object.HasStateAuthority}", this);
+            DebugLogger.Health($"Spawned | maxHealth={m_maxHealth} currentHealth={m_currentHealth} hasAuthority={IsOwner}", this);
 
             // Cache original color for flash effect
             DebugLogger.RequireSerializedField(m_playerRenderer, "m_playerRenderer", this);
@@ -213,11 +210,28 @@ namespace MRMotifs.Shooting
             DebugLogger.RequireSerializedField(m_respawnSound, "m_respawnSound", this);
         }
 
+        public override void OnNetworkDespawn()
+        {
+            base.OnNetworkDespawn();
+            CurrentHealth.OnValueChanged -= OnHealthValueChanged;
+            IsDead.OnValueChanged -= OnDeadValueChanged;
+        }
+
+        private void OnHealthValueChanged(int previousValue, int newValue)
+        {
+            OnHealthUpdated?.Invoke(newValue, m_maxHealth);
+        }
+
+        private void OnDeadValueChanged(bool previousValue, bool newValue)
+        {
+            // Additional visual effects can be added here
+        }
+
         /// <summary>
-        /// Apply damage locally without using Fusion RPCs.
+        /// Apply damage locally without using RPCs.
         /// This is used when PlayerHealthMotif is added dynamically and RPCs don't work.
         /// </summary>
-        public void ApplyDamageLocal(int damage, PlayerRef attacker)
+        public void ApplyDamageLocal(int damage, ulong attacker)
         {
             DebugLogger.Health($"Damage | amount={damage} attacker={attacker} health={m_currentHealth}/{m_maxHealth}", this);
             
@@ -248,7 +262,7 @@ namespace MRMotifs.Shooting
         /// </summary>
         public void TakeDamage(float damage, Vector3 position, Vector3 normal, IDamageable.DamageCallback callback = null)
         {
-            ApplyDamageLocal((int)damage, PlayerRef.None);
+            ApplyDamageLocal((int)damage, 0);
             
             // Record damage taken
             if (PlayerStats != null)
@@ -299,7 +313,7 @@ namespace MRMotifs.Shooting
             }
         }
 
-        private void DieLocal(PlayerRef killer)
+        private void DieLocal(ulong killer)
         {
             DebugLogger.Health($"DEATH | killer={killer} deaths={PlayerStats.Deaths}", this);
             m_isDead = true;
@@ -313,7 +327,7 @@ namespace MRMotifs.Shooting
 
             // Fire death event
             OnPlayerDied?.Invoke(killer);
-            OnScoreUpdated?.Invoke(PlayerStats.Kills, PlayerStats.Deaths);
+            OnScoreUpdated?.Invoke(PlayerStats.Kills.Value, PlayerStats.Deaths.Value);
 
             // Start respawn timer
             StartCoroutine(RespawnAfterDelayLocal());
@@ -337,29 +351,29 @@ namespace MRMotifs.Shooting
         }
 
         /// <summary>
-        /// RPC to apply damage to this player. Called by BulletMotif on hit.
+        /// ServerRpc to apply damage to this player. Called by BulletMotif on hit.
         /// </summary>
-        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-        public void TakeDamageRpc(int damage, PlayerRef attacker)
+        [ServerRpc(RequireOwnership = false)]
+        public void TakeDamageServerRpc(int damage, ulong attacker)
         {
-            if (IsDead || IsInvulnerable)
+            if (IsDead.Value || IsInvulnerable.Value)
             {
                 return;
             }
 
-            CurrentHealth = Mathf.Max(0, CurrentHealth - damage);
+            CurrentHealth.Value = Mathf.Max(0, CurrentHealth.Value - damage);
 
             // Notify all clients about the hit
-            OnHitRpc();
+            OnHitClientRpc();
 
-            if (CurrentHealth <= 0)
+            if (CurrentHealth.Value <= 0)
             {
                 Die(attacker);
             }
         }
 
-        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-        private void OnHitRpc()
+        [ClientRpc]
+        private void OnHitClientRpc()
         {
             // Play hit sound
             if (m_audioSource != null && m_hitSound != null)
@@ -384,47 +398,47 @@ namespace MRMotifs.Shooting
             }
         }
 
-        private void Die(PlayerRef killer)
+        private void Die(ulong killer)
         {
-            IsDead = true;
+            IsDead.Value = true;
             Deaths++;
 
             // Award kill to attacker
-            if (killer != PlayerRef.None)
+            if (killer != 0)
             {
                 AwardKillToPlayer(killer);
             }
 
             // Broadcast death
-            OnDeathRpc(killer);
+            OnDeathClientRpc(killer);
 
             // Start respawn timer
             _ = StartCoroutine(RespawnAfterDelay());
         }
 
-        private void AwardKillToPlayer(PlayerRef killer)
+        private void AwardKillToPlayer(ulong killer)
         {
             // Find the killer's PlayerHealthMotif and request kill increment on their state authority
             var players = FindObjectsByType<PlayerHealthMotif>(FindObjectsSortMode.None);
             foreach (var player in players)
             {
-                if (player.OwnerPlayer == killer)
+                if (player.OwnerPlayer.Value == killer)
                 {
-                    player.IncrementKillsRpc();
+                    player.IncrementKillsServerRpc();
                     break;
                 }
             }
         }
 
-        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-        public void IncrementKillsRpc()
+        [ServerRpc(RequireOwnership = false)]
+        public void IncrementKillsServerRpc()
         {
-            // Only state authority modifies the networked Kills property
+            // Only server modifies the Kills property
             Kills++;
         }
 
-        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-        private void OnDeathRpc(PlayerRef killer)
+        [ClientRpc]
+        private void OnDeathClientRpc(ulong killer)
         {
             // Play death sound
             if (m_audioSource != null && m_deathSound != null)
@@ -442,7 +456,7 @@ namespace MRMotifs.Shooting
         {
             yield return new WaitForSeconds(m_respawnDelay);
 
-            if (Object.HasStateAuthority)
+            if (IsOwner)
             {
                 Respawn();
             }
@@ -450,9 +464,9 @@ namespace MRMotifs.Shooting
 
         private void Respawn()
         {
-            CurrentHealth = m_maxHealth;
-            IsDead = false;
-            IsInvulnerable = true;
+            CurrentHealth.Value = m_maxHealth;
+            IsDead.Value = false;
+            IsInvulnerable.Value = true;
 
             // Move to spawn point if available
             if (m_spawnPoint != null)
@@ -466,14 +480,14 @@ namespace MRMotifs.Shooting
             }
 
             // Notify all clients about respawn
-            OnRespawnRpc();
+            OnRespawnClientRpc();
 
             // Start invulnerability timer
             _ = StartCoroutine(EndInvulnerabilityAfterDelay());
         }
 
-        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-        private void OnRespawnRpc()
+        [ClientRpc]
+        private void OnRespawnClientRpc()
         {
             // Play respawn sound
             if (m_audioSource != null && m_respawnSound != null)
@@ -489,9 +503,9 @@ namespace MRMotifs.Shooting
         {
             yield return new WaitForSeconds(m_invulnerabilityDuration);
 
-            if (Object.HasStateAuthority)
+            if (IsOwner)
             {
-                IsInvulnerable = false;
+                IsInvulnerable.Value = false;
             }
         }
 
@@ -523,27 +537,16 @@ namespace MRMotifs.Shooting
         /// </summary>
         public void ResetStats()
         {
-            if (Object == null || !Object.IsValid) return;
+            if (!IsSpawned) return;
 
-            if (Object.HasStateAuthority)
+            if (IsOwner)
             {
                 Kills = 0;
                 Deaths = 0;
-                CurrentHealth = m_maxHealth;
-                IsDead = false;
-                IsInvulnerable = false;
+                CurrentHealth.Value = m_maxHealth;
+                IsDead.Value = false;
+                IsInvulnerable.Value = false;
             }
-        }
-
-        // Change callbacks for UI updates
-        private void OnHealthChanged()
-        {
-            OnHealthUpdated?.Invoke(CurrentHealth, m_maxHealth);
-        }
-
-        private void OnDeadStateChanged()
-        {
-            // Additional visual effects can be added here
         }
 
         private void OnScoreChanged()
@@ -552,4 +555,3 @@ namespace MRMotifs.Shooting
         }
     }
 }
-#endif

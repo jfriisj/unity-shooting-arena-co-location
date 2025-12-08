@@ -5,7 +5,7 @@ using Meta.XR.Samples;
 using Oculus.Interaction;
 using UnityEngine;
 
-namespace MRMotifs.SharedActivities.Helpers
+namespace MRMotifs.Shooting.Helpers
 {
     /// <summary>
     /// Manages scaling and alpha transitions for an object over time, using a coroutine to animate the object smoothly.

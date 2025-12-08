@@ -1,6 +1,4 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
-
-#if FUSION2
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -55,7 +53,7 @@ namespace MRMotifs.Shooting
                 var players = FindObjectsByType<PlayerHealthMotif>(FindObjectsSortMode.None);
                 foreach (var player in players)
                 {
-                    if (player.Object != null && player.Object.HasStateAuthority)
+                    if (player.NetworkObject != null && player.NetworkObject.IsOwner)
                     {
                         m_playerHealth = player;
                         break;
@@ -199,4 +197,3 @@ namespace MRMotifs.Shooting
         }
     }
 }
-#endif

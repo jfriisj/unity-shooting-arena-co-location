@@ -1,11 +1,10 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
 
-#if FUSION2
 using UnityEngine;
 using System;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.Metrics
+namespace MRMotifs.Shooting.Metrics
 {
     /// <summary>
     /// Tracks spatial calibration accuracy for colocation.
@@ -34,7 +33,8 @@ namespace MRMotifs.SharedActivities.Metrics
         
         #region Private Fields
         
-        private MRMotifs.ColocatedExperiences.Colocation.ColocationManager m_colocationManager;
+        // Note: ColocationManager removed - now using Meta's Building Blocks for colocation
+        // private MRMotifs.ColocatedExperiences.Colocation.ColocationManager m_colocationManager;
         private OVRCameraRig m_cameraRig;
         
         private bool m_hasCalibrated;
@@ -61,13 +61,12 @@ namespace MRMotifs.SharedActivities.Metrics
         
         private void Start()
         {
-            m_colocationManager = FindAnyObjectByType<MRMotifs.ColocatedExperiences.Colocation.ColocationManager>();
+            // Note: ColocationManager removed - now using Meta's Building Blocks for colocation
+            // m_colocationManager = FindAnyObjectByType<MRMotifs.ColocatedExperiences.Colocation.ColocationManager>();
             m_cameraRig = FindAnyObjectByType<OVRCameraRig>();
             
-            if (m_colocationManager == null)
-            {
-                Debug.LogWarning("[CalibrationAccuracyTracker] ColocationManager not found. Some features will be limited.");
-            }
+            // Note: Using Meta's Building Blocks for colocation instead of custom ColocationManager
+            Debug.Log("[CalibrationAccuracyTracker] Now using Meta's Building Blocks for colocation.");
         }
         
         private void Update()
@@ -87,16 +86,9 @@ namespace MRMotifs.SharedActivities.Metrics
         {
             if (!m_hasCalibrated) return;
             
-            // Get current error from ColocationManager if available
-            if (m_colocationManager != null)
-            {
-                m_currentErrorMm = m_colocationManager.ValidateCalibration();
-            }
-            else
-            {
-                // Fallback: estimate drift from camera rig movement
-                m_currentErrorMm = EstimateDriftError();
-            }
+            // Note: ColocationManager removed - using Meta's Building Blocks for colocation
+            // Now always use drift estimation since we don't have custom ColocationManager
+            m_currentErrorMm = EstimateDriftError();
             
             // Update statistics
             m_maxErrorMm = Mathf.Max(m_maxErrorMm, m_currentErrorMm);
@@ -303,4 +295,3 @@ namespace MRMotifs.SharedActivities.Metrics
         #endregion
     }
 }
-#endif

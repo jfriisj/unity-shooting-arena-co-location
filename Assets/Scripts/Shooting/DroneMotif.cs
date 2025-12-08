@@ -1,8 +1,8 @@
 // Copyright (c) Meta Platforms, Inc. and affiliates.
 
-#if FUSION2
 using System;
-using Fusion;
+using System.Collections;
+using Unity.Netcode;
 using UnityEngine;
 using Meta.XR.Samples;
 using MRMotifs.Shared;
@@ -13,7 +13,8 @@ namespace MRMotifs.Shooting
     /// Simplified drone enemy for the shooting game.
     /// Based on Discover/DroneRage Enemy.cs but streamlined for simplicity.
     /// Implements IDamageable for bullet hit detection.
-    /// Master client authority - only runs physics/AI on master.
+    /// Server authority - only runs physics/AI on server.
+    /// Converted from Photon Fusion to Unity NGO.
     /// </summary>
     [MetaCodeSample("MRMotifs-SharedActivities")]
     [RequireComponent(typeof(NetworkObject), typeof(Rigidbody), typeof(Collider))]
@@ -24,6 +25,7 @@ namespace MRMotifs.Shooting
         /// </summary>
         public static int ConfigHealth { get; set; } = 50;
         public static float ConfigSpeed { get; set; } = 3f;
+
         [Header("=== DRONE SETTINGS ===")]
         
         [SerializeField, Tooltip("Maximum health for this drone")]
@@ -49,11 +51,13 @@ namespace MRMotifs.Shooting
         /// <summary>
         /// Current health of the drone. Networked for all clients.
         /// </summary>
-        [Networked]
-        public float Health { get; private set; }
+        public NetworkVariable<float> Health = new NetworkVariable<float>(
+            50f,
+            NetworkVariableReadPermission.Everyone,
+            NetworkVariableWritePermission.Server);
 
         /// <summary>
-        /// Current target player. Only meaningful on master client.
+        /// Current target player. Only meaningful on server.
         /// </summary>
         public PlayerHealthMotif TargetPlayer { get; private set; }
 
@@ -72,10 +76,15 @@ namespace MRMotifs.Shooting
         private float m_hoverNoiseOffset;
         private bool m_isDead = false;
 
-        public override void Spawned()
+        public override void OnNetworkSpawn()
         {
+            base.OnNetworkSpawn();
+
             // Initialize health from config
-            Health = ConfigHealth > 0 ? ConfigHealth : m_maxHealth;
+            if (IsServer)
+            {
+                Health.Value = ConfigHealth > 0 ? ConfigHealth : m_maxHealth;
+            }
             
             // Apply configured speed
             if (ConfigSpeed > 0) m_chaseSpeed = ConfigSpeed;
@@ -86,10 +95,10 @@ namespace MRMotifs.Shooting
             // Randomize hover for organic movement
             m_hoverNoiseOffset = UnityEngine.Random.Range(-3600f, 3600f);
             
-            DebugLogger.Shooting($"Drone spawned | Health={Health} | IsMaster={Runner.IsMasterClient()}", this);
+            DebugLogger.Shooting($"Drone spawned | Health={Health.Value} | IsServer={IsServer}", this);
 
-            // Only master client runs drone physics and AI
-            if (!Runner.IsMasterClient())
+            // Only server runs drone physics and AI
+            if (!IsServer)
             {
                 m_rigidbody.isKinematic = true;
                 if (m_ai) m_ai.enabled = false;
@@ -99,7 +108,7 @@ namespace MRMotifs.Shooting
             // Find initial target player
             FindTargetPlayer();
             
-            DebugLogger.Shooting($"Drone initialized on master client | Target={TargetPlayer?.name}", this);
+            DebugLogger.Shooting($"Drone initialized on server | Target={TargetPlayer?.name}", this);
         }
 
         private void FindTargetPlayer()
@@ -111,7 +120,7 @@ namespace MRMotifs.Shooting
 
             foreach (var player in players)
             {
-                if (player.CurrentHealth <= 0) continue; // Skip dead players
+                if (player.CurrentHealth.Value <= 0) continue; // Skip dead players
                 
                 var distance = Vector3.Distance(transform.position, player.transform.position);
                 if (distance < closestDistance)
@@ -132,7 +141,7 @@ namespace MRMotifs.Shooting
         /// </summary>
         public bool FlyTowards(Vector3 targetPosition)
         {
-            if (!Runner.IsMasterClient() || m_isDead) return false;
+            if (!IsServer || m_isDead) return false;
 
             var direction = targetPosition - transform.position;
             var distance = direction.magnitude;
@@ -163,7 +172,7 @@ namespace MRMotifs.Shooting
         /// </summary>
         public void HoverAround(Vector3 centerPosition)
         {
-            if (!Runner.IsMasterClient() || m_isDead) return;
+            if (!IsServer || m_isDead) return;
 
             // Add noise for organic movement
             var noise = Vector3.zero;
@@ -193,38 +202,48 @@ namespace MRMotifs.Shooting
         {
             if (m_isDead) return;
             
-            // Only master client processes damage
-            if (Runner.IsMasterClient())
+            // Only server processes damage
+            if (IsServer)
             {
-                ProcessDamageRPC(damage, position, normal);
+                ProcessDamage(damage, position, normal);
+            }
+            else
+            {
+                // Request server to process damage
+                ProcessDamageServerRpc(damage, position, normal);
             }
         }
 
-        [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
-        private void ProcessDamageRPC(float damage, Vector3 position, Vector3 normal)
+        [ServerRpc(RequireOwnership = false)]
+        private void ProcessDamageServerRpc(float damage, Vector3 position, Vector3 normal)
         {
-            if (!Object.HasStateAuthority || m_isDead) return;
+            ProcessDamage(damage, position, normal);
+        }
 
-            var oldHealth = Health;
-            Health = Mathf.Max(0f, Health - damage);
+        private void ProcessDamage(float damage, Vector3 position, Vector3 normal)
+        {
+            if (!IsServer || m_isDead) return;
+
+            var oldHealth = Health.Value;
+            Health.Value = Mathf.Max(0f, Health.Value - damage);
             
-            DebugLogger.Shooting($"Drone took damage | damage={damage:F1} | health={Health:F1}/{m_maxHealth}", this);
+            DebugLogger.Shooting($"Drone took damage | damage={damage:F1} | health={Health.Value:F1}/{m_maxHealth}", this);
             
             // Trigger damage visual effects on all clients
-            PlayDamageEffectsRPC(damage, position, normal);
+            PlayDamageEffectsClientRpc(damage, position, normal);
             
             // Fire events
             OnDroneDamaged?.Invoke(this, damage);
             
             // Check for death
-            if (Health <= 0f && oldHealth > 0f)
+            if (Health.Value <= 0f && oldHealth > 0f)
             {
                 Die();
             }
         }
 
-        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-        private void PlayDamageEffectsRPC(float damage, Vector3 position, Vector3 normal)
+        [ClientRpc]
+        private void PlayDamageEffectsClientRpc(float damage, Vector3 position, Vector3 normal)
         {
             // TODO: Play damage particle effects, sounds, etc.
             DebugLogger.Shooting($"Playing damage effects | damage={damage:F1}", this);
@@ -232,12 +251,12 @@ namespace MRMotifs.Shooting
 
         public void Heal(float healing, IDamageable.DamageCallback callback = null)
         {
-            if (m_isDead || !Runner.IsMasterClient()) return;
+            if (m_isDead || !IsServer) return;
             
-            var oldHealth = Health;
-            Health = Mathf.Min(m_maxHealth, Health + healing);
+            var oldHealth = Health.Value;
+            Health.Value = Mathf.Min(m_maxHealth, Health.Value + healing);
             
-            DebugLogger.Shooting($"Drone healed | healing={healing:F1} | health={Health:F1}/{m_maxHealth}", this);
+            DebugLogger.Shooting($"Drone healed | healing={healing:F1} | health={Health.Value:F1}/{m_maxHealth}", this);
         }
 
         #endregion
@@ -249,10 +268,10 @@ namespace MRMotifs.Shooting
             if (m_isDead) return;
             
             m_isDead = true;
-            DebugLogger.Shooting($"Drone died | Health={Health}", this);
+            DebugLogger.Shooting($"Drone died | Health={Health.Value}", this);
             
             // Trigger death effects on all clients
-            PlayDeathEffectsRPC();
+            PlayDeathEffectsClientRpc();
             
             // Fire events
             OnDroneDestroyed?.Invoke(this);
@@ -261,8 +280,8 @@ namespace MRMotifs.Shooting
             StartCoroutine(DespawnAfterDelay());
         }
 
-        [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
-        private void PlayDeathEffectsRPC()
+        [ClientRpc]
+        private void PlayDeathEffectsClientRpc()
         {
             DebugLogger.Shooting($"Playing death effects", this);
             
@@ -275,7 +294,7 @@ namespace MRMotifs.Shooting
             // TODO: Play death sound, particles, etc.
         }
 
-        private System.Collections.IEnumerator DespawnAfterDelay()
+        private IEnumerator DespawnAfterDelay()
         {
             // Stop AI and make kinematic
             if (m_ai) m_ai.enabled = false;
@@ -283,9 +302,9 @@ namespace MRMotifs.Shooting
             
             yield return new WaitForSeconds(1f);
             
-            if (Object && Runner.IsClient)
+            if (NetworkObject != null && IsServer)
             {
-                Runner.Despawn(Object);
+                NetworkObject.Despawn();
             }
         }
 
@@ -296,7 +315,7 @@ namespace MRMotifs.Shooting
             DebugLogger.Shooting($"Drone destroyed", this);
         }
 
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
         private void OnDrawGizmosSelected()
         {
             // Visualize hover radius
@@ -310,7 +329,6 @@ namespace MRMotifs.Shooting
                 Gizmos.DrawLine(transform.position, TargetPlayer.transform.position);
             }
         }
-        #endif
+#endif
     }
 }
-#endif
