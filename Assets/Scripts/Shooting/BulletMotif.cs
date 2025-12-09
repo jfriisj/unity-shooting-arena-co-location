@@ -63,17 +63,17 @@ namespace MRMotifs.Shooting
         /// <summary>
         /// The player who fired this bullet (client ID).
         /// </summary>
-        public NetworkVariable<ulong> OwnerPlayer = new NetworkVariable<ulong>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<ulong> OwnerPlayer = new NetworkVariable<ulong>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// The velocity of the bullet, synchronized across clients.
         /// </summary>
-        private NetworkVariable<Vector3> NetworkedVelocity = new NetworkVariable<Vector3>(Vector3.zero, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        private NetworkVariable<Vector3> NetworkedVelocity = new NetworkVariable<Vector3>(Vector3.zero, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// Whether this bullet has already hit something.
         /// </summary>
-        private NetworkVariable<bool> HasHit = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        private NetworkVariable<bool> HasHit = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         private PlayerHealthMotif m_shooterPlayerReference;
 

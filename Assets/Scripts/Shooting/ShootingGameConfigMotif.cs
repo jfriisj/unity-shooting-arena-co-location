@@ -24,7 +24,7 @@ namespace MRMotifs.Shooting
 
         [Tooltip("Minimum players required to start a match.")]
         [Range(1, 8)]
-        public int minPlayersToStart = 2;
+        public int minPlayersToStart = 1;
 
         [Tooltip("Countdown duration before round starts (seconds).")]
         [Range(1, 10)]

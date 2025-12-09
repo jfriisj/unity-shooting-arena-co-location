@@ -43,7 +43,6 @@ GameObject:
   - component: {fileID: 8374619550103661013}
   - component: {fileID: 4795292650008551943}
   - component: {fileID: 4778622842165058431}
-  - component: {fileID: 4316951302534558789}
   - component: {fileID: 3315173510238888226}
   - component: {fileID: 2338309738527079604}
   m_Layer: 9
@@ -117,25 +116,6 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 0
   m_CollisionDetection: 2
---- !u!114 &4316951302534558789
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4170924974484475727}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  SortKey: 3343851125
-  ObjectInterest: 1
-  Flags: 262145
-  NestedObjects: []
-  NetworkedBehaviours:
-  - {fileID: 2338309738527079604}
-  ForceRemoteRenderTimeframe: 0
 --- !u!96 &3315173510238888226
 TrailRenderer:
   serializedVersion: 3
@@ -278,6 +258,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 1024
   m_hitSound: {fileID: 8300000, guid: 424548b6aad85dc44b3b28efb4d27487, type: 3}
+  OwnerPlayer:
+    m_InternalValue: 0
 --- !u!1001 &562996986195368038
 PrefabInstance:
   m_ObjectHideFlags: 0

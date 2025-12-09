@@ -9,8 +9,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5744054802415334311}
-  - component: {fileID: 6786554525395461797}
-  - component: {fileID: 4843374526632490227}
   m_Layer: 0
   m_Name: NetworkedCover
   m_TagString: Untagged
@@ -33,40 +31,3 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &6786554525395461797
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6870985853740165427}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: -1552182283, guid: e725a070cec140c4caffb81624c8c787, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  SortKey: 2236872547
-  ObjectInterest: 1
-  Flags: 262145
-  NestedObjects: []
-  NetworkedBehaviours:
-  - {fileID: 4843374526632490227}
-  ForceRemoteRenderTimeframe: 0
---- !u!114 &4843374526632490227
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6870985853740165427}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 619694aa14deffb478164cc5abb8ae64, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_size: {x: 1, y: 1.5, z: 0.3}
-  m_coverColor: {r: 0.3, g: 0.3, b: 0.35, a: 0.8}
-  m_materialSmoothness: 0.2
-  m_interpolationSpeed: 10
-  _NetworkedPosition: {x: 0, y: 0, z: 0}
-  _NetworkedRotation: {x: 0, y: 0, z: 0, w: 0}

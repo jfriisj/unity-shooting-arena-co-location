@@ -162,7 +162,6 @@ MonoBehaviour:
   m_weaponPositionOffset: {x: 0, y: 0, z: 0.05}
   m_weaponRotationOffset: {x: -90, y: 180, z: 0}
   m_weaponScale: 0.8
-  m_muzzleFlashPrefab: {fileID: 100100000, guid: 51b76f616384d4946bed4ecc9a6c2c3e, type: 3}
   m_muzzleFlashDuration: 0.05
   m_leftFirePoint: {fileID: 0}
   m_rightFirePoint: {fileID: 0}

@@ -8,9 +8,15 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/ShootingGame.unity
     guid: 63e06afb67c01e743aaafd919e186783
-  - enabled: 1
+  - enabled: 0
     path: Assets/DroneWars.unity
     guid: bf73a0a9136ecb346b7030e31dc2bb35
+  - enabled: 1
+    path: Assets/Scenes/DroneWars.unity
+    guid: 2189a053a7ee6324c9231989836c397f
+  - enabled: 1
+    path: Assets/Scenes/Arena-Drone-v2.unity
+    guid: f8929bd56919dc04abed55f9b896a80c
   m_configObjects:
     com.unity.xr.arfoundation.simulation_settings: {fileID: 11400000, guid: 1a29827f94e6b5c42896485f3e308f80, type: 2}
     com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 164d77ef9199b154685194b5e1feab47, type: 2}

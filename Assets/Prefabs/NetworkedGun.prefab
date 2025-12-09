@@ -56,7 +56,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   blockId: 7358e191-33b7-43ca-b066-b2f00531ac66
-  instanceId: c7d80a68-852a-443c-9e4f-b238e700524e
+  instanceId: 54686447-610f-415c-a69f-f6415f0b6277
   version: 1
   installationRoutineCheckpoint:
     _installationRoutineId: 
@@ -139,7 +139,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 2959747904
+  GlobalObjectIdHash: 2358756561
   InScenePlacedSourceGlobalObjectIdHash: 271989302
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
@@ -193,7 +193,7 @@ AudioSource:
   Priority: 128
   DopplerLevel: 1
   MinDistance: 1
-  MaxDistance: 500
+  MaxDistance: 50
   Pan2D: 0
   rolloffMode: 0
   BypassEffects: 0
@@ -228,7 +228,7 @@ AudioSource:
     m_Curve:
     - serializedVersion: 3
       time: 0
-      value: 0
+      value: 1
       inSlope: 0
       outSlope: 0
       tangentMode: 0

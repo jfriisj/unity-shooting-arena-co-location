@@ -56,22 +56,22 @@ namespace MRMotifs.Shooting
         /// <summary>
         /// Current health, synchronized across all clients.
         /// </summary>
-        public NetworkVariable<int> CurrentHealth = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<int> CurrentHealth = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// Whether the player is currently dead.
         /// </summary>
-        public NetworkVariable<bool> IsDead = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<bool> IsDead = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// Whether the player is currently invulnerable (after respawn).
         /// </summary>
-        public NetworkVariable<bool> IsInvulnerable = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<bool> IsInvulnerable = new NetworkVariable<bool>(false, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// The player who owns this health component.
         /// </summary>
-        public NetworkVariable<ulong> OwnerPlayer = new NetworkVariable<ulong>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<ulong> OwnerPlayer = new NetworkVariable<ulong>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// Reference to player statistics component.
@@ -174,9 +174,9 @@ namespace MRMotifs.Shooting
             m_isDead = false;
             m_isInvulnerable = false;
 
-            if (IsOwner)
+            if (IsServer)
             {
-                OwnerPlayer.Value = NetworkManager.Singleton.LocalClientId;
+                OwnerPlayer.Value = OwnerClientId;
                 CurrentHealth.Value = m_maxHealth;
                 IsDead.Value = false;
                 IsInvulnerable.Value = false;
@@ -262,13 +262,9 @@ namespace MRMotifs.Shooting
         /// </summary>
         public void TakeDamage(float damage, Vector3 position, Vector3 normal, IDamageable.DamageCallback callback = null)
         {
-            ApplyDamageLocal((int)damage, 0);
-            
-            // Record damage taken
-            if (PlayerStats != null)
-            {
-                PlayerStats.RecordDamageTaken(damage);
-            }
+            // Apply damage via ServerRpc
+            ulong attackerId = NetworkManager.Singleton != null ? NetworkManager.Singleton.LocalClientId : 0;
+            TakeDamageServerRpc((int)damage, attackerId);
             
             // Invoke callback if provided
             callback?.Invoke(this, damage, m_isDead);
@@ -362,6 +358,12 @@ namespace MRMotifs.Shooting
             }
 
             CurrentHealth.Value = Mathf.Max(0, CurrentHealth.Value - damage);
+
+            // Record damage taken
+            if (PlayerStats != null)
+            {
+                PlayerStats.RecordDamageTaken(damage);
+            }
 
             // Notify all clients about the hit
             OnHitClientRpc();

@@ -85,3 +85,23 @@ To maintain code quality while remaining pragmatic within Unity's ecosystem, we 
 *   **D - Dependency Inversion (Pragmatic):** We accept some coupling to concrete `MonoBehaviour` types (via `FindAnyObjectByType`) to avoid the complexity of a full Dependency Injection framework, unless testing requirements change.
 
 ---
+
+## 🏗️ Scene Architecture: Arena-Drone-v2
+
+This scene utilizes Meta XR Building Blocks to establish the Mixed Reality and Multiplayer infrastructure.
+
+| Object Name | Responsibility |
+| :--- | :--- |
+| **`[BuildingBlock] Camera Rig`** | **Player Rig**: The OVRCameraRig handling Head/Hand tracking and the OVRManager. |
+| **`[BuildingBlock] Passthrough`** | **Visuals**: Manages the Passthrough layer to blend virtual content with the real world. |
+| **`[BuildingBlock] Network Manager`** | **Networking**: The `NetworkRunner` prefab that manages the Photon Fusion session and spawns the player avatar. |
+| **`[BuildingBlock] Networked Avatar`** | **Player Representation**: The Meta Avatar prefab spawned for each player to show their presence. |
+| **`[BuildingBlock] MR Utility Kit`** | **Environment**: Manages Scene Understanding (Room Mesh), Raycasting, and Anchor loading. |
+| **`[BuildingBlock] Colocation`** | **Alignment**: Manages the `OVRColocationSession` to align coordinate systems of multiple devices in the same room. |
+| **`[BuildingBlock] Shared Spatial Anchor Core`** | **Persistence**: Handles the low-level saving and sharing of Spatial Anchors for colocation. |
+| **`[BuildingBlock] Local Matchmaking`** | **Discovery**: Handles discovering other devices on the local network for colocation. |
+| **`[BuildingBlock] OVRInteractionComprehensive`** | **Input**: The OVRInteractionSDK setup for Hand Tracking, Controller Grabs, Rays, and Pokes. |
+| **`[BuildingBlock] Occlusion`** | **Rendering**: Handles depth occlusion so virtual objects correctly disappear behind real-world furniture/walls. |
+| **`[BuildingBlock] Room Guardian`** | **Safety**: Prevents players from walking into virtual objects or outside the playspace (if configured). |
+| **`[BuildingBlock] Controller Tracking (L/R)`** | **Visuals**: Displays the controller models and handles their tracking updates. |
+

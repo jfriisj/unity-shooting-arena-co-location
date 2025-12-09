@@ -18,47 +18,47 @@ namespace MRMotifs.Shooting
         /// <summary>
         /// Number of kills this player has scored.
         /// </summary>
-        public NetworkVariable<int> Kills = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<int> Kills = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// Number of times this player has died.
         /// </summary>
-        public NetworkVariable<int> Deaths = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<int> Deaths = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// Total number of shots fired by this player.
         /// </summary>
-        public NetworkVariable<int> ShotsFired = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<int> ShotsFired = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// Number of shots that hit a target.
         /// </summary>
-        public NetworkVariable<int> ShotsHit = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<int> ShotsHit = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// Total damage dealt by this player.
         /// </summary>
-        public NetworkVariable<float> DamageDealt = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<float> DamageDealt = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// Total damage taken by this player.
         /// </summary>
-        public NetworkVariable<float> DamageTaken = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<float> DamageTaken = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// Total healing received by this player.
         /// </summary>
-        public NetworkVariable<float> HealingReceived = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<float> HealingReceived = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// Time survived in seconds.
         /// </summary>
-        public NetworkVariable<float> TimeSurvived = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<float> TimeSurvived = new NetworkVariable<float>(0f, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// Number of drones killed by this player.
         /// </summary>
-        public NetworkVariable<int> DroneKills = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Owner);
+        public NetworkVariable<int> DroneKills = new NetworkVariable<int>(0, NetworkVariableReadPermission.Everyone, NetworkVariableWritePermission.Server);
 
         /// <summary>
         /// Calculates shooting accuracy as a percentage (0-1).
@@ -75,7 +75,7 @@ namespace MRMotifs.Shooting
         /// </summary>
         public void AddKill()
         {
-            if (IsOwner)
+            if (IsServer)
             {
                 Kills.Value++;
                 DebugLogger.Player($"Kill recorded | total={Kills.Value}", this);
@@ -87,7 +87,7 @@ namespace MRMotifs.Shooting
         /// </summary>
         public void AddDeath()
         {
-            if (IsOwner)
+            if (IsServer)
             {
                 Deaths.Value++;
                 DebugLogger.Player($"Death recorded | total={Deaths.Value}", this);
@@ -99,7 +99,7 @@ namespace MRMotifs.Shooting
         /// </summary>
         public void AddDroneKill()
         {
-            if (IsOwner)
+            if (IsServer)
             {
                 DroneKills.Value++;
                 DebugLogger.Player($"Drone kill recorded | total={DroneKills.Value}", this);
@@ -111,10 +111,20 @@ namespace MRMotifs.Shooting
         /// </summary>
         public void RecordShotFired()
         {
-            if (IsOwner)
+            if (IsServer)
             {
                 ShotsFired.Value++;
             }
+            else
+            {
+                RecordShotFiredServerRpc();
+            }
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        private void RecordShotFiredServerRpc()
+        {
+            ShotsFired.Value++;
         }
 
         /// <summary>
@@ -123,7 +133,7 @@ namespace MRMotifs.Shooting
         /// <param name="damage">Damage dealt by the shot.</param>
         public void RecordShotHit(float damage)
         {
-            if (IsOwner)
+            if (IsServer)
             {
                 ShotsHit.Value++;
                 DamageDealt.Value += damage;
@@ -137,7 +147,7 @@ namespace MRMotifs.Shooting
         /// <param name="damage">Amount of damage taken.</param>
         public void RecordDamageTaken(float damage)
         {
-            if (IsOwner)
+            if (IsServer)
             {
                 DamageTaken.Value += damage;
             }
@@ -149,7 +159,7 @@ namespace MRMotifs.Shooting
         /// <param name="healing">Amount of healing received.</param>
         public void RecordHealing(float healing)
         {
-            if (IsOwner)
+            if (IsServer)
             {
                 HealingReceived.Value += healing;
             }
@@ -160,7 +170,7 @@ namespace MRMotifs.Shooting
         /// </summary>
         public void ResetStats()
         {
-            if (IsOwner)
+            if (IsServer)
             {
                 Kills.Value = 0;
                 Deaths.Value = 0;
@@ -192,7 +202,7 @@ namespace MRMotifs.Shooting
             if (!IsSpawned) return;
 
             // Track survival time (only when alive and game is running)
-            if (IsOwner)
+            if (IsServer)
             {
                 var health = GetComponent<PlayerHealthMotif>();
                 if (health != null && !health.IsDeadLocal)

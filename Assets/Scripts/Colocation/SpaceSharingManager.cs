@@ -88,7 +88,7 @@ namespace MRMotifs.ColocatedExperiences.Colocation
                 (roomUuids[0], remoteFloorPose)
             );
              
-             if (!result.Success)
+             if (result != MRUK.LoadDeviceResult.Success)
              {
                  Debug.LogError("Failed to load scene from shared rooms");
              }
