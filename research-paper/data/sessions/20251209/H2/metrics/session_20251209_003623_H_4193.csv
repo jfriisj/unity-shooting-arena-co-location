@@ -1,0 +1,1 @@
+session_id,headset_id,participant_count,timestamp_sec,frame_rate_fps,network_latency_ms,calibration_error_mm,battery_temp_c,battery_level,scene_state

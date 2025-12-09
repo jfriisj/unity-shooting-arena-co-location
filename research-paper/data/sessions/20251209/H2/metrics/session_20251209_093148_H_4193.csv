@@ -1,0 +1,4 @@
+session_id,headset_id,participant_count,timestamp_sec,frame_rate_fps,network_latency_ms,calibration_error_mm,battery_temp_c,battery_level,scene_state
+20251209_093148,H_4193,0,1.02,36.7,0.0,0.00,25.0,99,Offline
+20251209_093148,H_4193,0,2.03,32.7,0.0,0.00,25.0,99,Offline
+20251209_093148,H_4193,0,3.05,33.1,0.0,0.00,25.0,99,Offline

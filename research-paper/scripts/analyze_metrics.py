@@ -50,6 +50,7 @@ def load_session_data(session_dir: str) -> pd.DataFrame:
     # Find all CSV files in headset subdirectories
     for headset_dir in glob.glob(os.path.join(session_dir, 'H*')):
         csv_files = glob.glob(os.path.join(headset_dir, '*.csv'))
+        csv_files.extend(glob.glob(os.path.join(headset_dir, 'metrics', '*.csv')))
         
         for csv_file in csv_files:
             try:

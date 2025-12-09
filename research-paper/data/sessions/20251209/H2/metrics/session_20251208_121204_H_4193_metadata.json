@@ -1,0 +1,12 @@
+{
+    "sessionId": "20251208_121204",
+    "headsetId": "H_4193",
+    "deviceName": "Quest 3",
+    "deviceModel": "Oculus Quest",
+    "startTime": "2025-12-08T12:12:05.4735260+01:00",
+    "endTime": "2025-12-08T12:15:49.5505500+01:00",
+    "durationMinutes": 3.734618663787842,
+    "totalMetrics": 222,
+    "unityVersion": "6000.0.62f1",
+    "appVersion": "0.1"
+}
