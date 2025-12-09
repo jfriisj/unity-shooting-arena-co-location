@@ -109,7 +109,16 @@ Create or verify `[UI] Scoreboard` GameObject:
 - `Canvas` (World Space)
 - Position: Above play area (e.g., Vector3(0, 2.5f, 0))
 
-### Task 6: Player Prefab Verification
+### Task 6: Connection Manager Setup
+
+Create or verify `[System] Connection Manager` GameObject:
+
+**Components Required:**
+- `ConnectionManagerMotif` - Monitors connection health
+- `HostMigrationHandlerMotif` - Handles host migration
+- `NetworkObject` - For NGO synchronization
+
+### Task 7: Player Prefab Verification
 
 Verify `Assets/Prefabs/ShootingAvatar.prefab` contains:
 
@@ -121,6 +130,22 @@ Verify `Assets/Prefabs/ShootingAvatar.prefab` contains:
 | `PlayerStatsMotif` | Kill/Death tracking |
 | `ShootingPlayerMotif` | Weapon mechanics |
 | `PlayerRigMotif` | Hitbox management |
+| `ShootingHUDMotif` | Local player UI (Health, Ammo) |
+| `ShootingSetupMotif` | Initializes shooting components |
+| `AvatarNameTagHandlerMotif` | Player name display |
+| `AvatarMovementHandlerMotif` | Smooth movement sync |
+
+### Task 8: Gun Prefab Verification
+
+Verify `Assets/Prefabs/NetworkedGun.prefab` contains:
+
+| Component | Purpose |
+|-----------|---------|
+| `NetworkObject` | NGO network identity |
+| `NetworkTransform` | Position sync |
+| `Grabbable` | Interaction SDK grab logic |
+| `NetworkedGunMotif` | Firing, ammo, networking |
+| `AudioSource` | Gunshot sounds (Spatial Blend = 1) |
 
 ---
 
@@ -137,6 +162,8 @@ Follow Single Responsibility Principle:
 | `PlayerHealthMotif` | Health, death, respawn | Shooting, movement |
 | `ShootingPlayerMotif` | Firing, ammo, muzzle flash | Health, scoring |
 | `BulletMotif` | Movement, collision, damage trigger | What takes damage |
+| `ShootingHUDMotif` | Local UI updates | Game logic, input |
+| `ConnectionManagerMotif` | Connection health, pause/resume | Game state, spawning |
 
 ---
 

@@ -19,6 +19,7 @@ GameObject:
   - component: {fileID: 9106582620973778346}
   - component: {fileID: 7094656629065372657}
   - component: {fileID: 359484440831454737}
+  - component: {fileID: -1816934184760250067}
   m_Layer: 0
   m_Name: NetworkedGun
   m_TagString: Untagged
@@ -139,7 +140,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GlobalObjectIdHash: 2358756561
+  GlobalObjectIdHash: 271989302
   InScenePlacedSourceGlobalObjectIdHash: 271989302
   AlwaysReplicateAsRoot: 0
   SynchronizeTransform: 1
@@ -338,6 +339,28 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f6c0be61502bb534f922ebb746851216, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &-1816934184760250067
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 944482162286932611}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 43f86b14a27b52f4f9298c33015b5c26, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _transferOnSecondSelection: 0
+  _addNewPointsToFront: 0
+  _forwardElement: {fileID: 0}
+  _oneGrabTransformer: {fileID: 0}
+  _twoGrabTransformer: {fileID: 0}
+  _targetTransform: {fileID: 0}
+  _maxGrabPoints: -1
+  _rigidbody: {fileID: 9106582620973778346}
+  _kinematicWhileSelected: 1
+  _throwWhenUnselected: 1
 --- !u!1 &3606091676266709561
 GameObject:
   m_ObjectHideFlags: 0
