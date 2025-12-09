@@ -310,7 +310,7 @@ namespace MRMotifs.Shooting
 
         #endregion
 
-        private void OnDestroy()
+        public override void OnDestroy()
         {
             DebugLogger.Shooting($"Drone destroyed", this);
         }

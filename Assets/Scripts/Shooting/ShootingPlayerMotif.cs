@@ -131,7 +131,7 @@ namespace MRMotifs.Shooting
             DebugLogger.Player($"Started | fireRate={m_fireRate:F2}s bulletSpeed={m_fireForce:F1} lifetime={m_bulletLifetime:F1}s", this);
         }
 
-        private void OnDestroy()
+        public override void OnDestroy()
         {
             // Restore controller visibility
             ShowControllerModels();
