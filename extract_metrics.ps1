@@ -24,12 +24,13 @@ param(
 $ErrorActionPreference = "Stop"
 
 # Package name for the app
-$PackageName = "com.weareheadset.MetaColocationDemos_Official"
+$PackageName = "com.jJFiisJ.ArenaShooting"
 
 # Find ADB
 $AdbPaths = @(
     "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe",
     "$env:USERPROFILE\AppData\Local\Android\Sdk\platform-tools\adb.exe",
+    "$env:USERPROFILE\Android\Sdk\platform-tools\adb.exe",
     "C:\Android\Sdk\platform-tools\adb.exe",
     "adb"
 )

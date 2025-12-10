@@ -9,7 +9,7 @@ set -e
 
 SESSION_NAME="${1:-$(date +%Y%m%d)}"
 OUTPUT_DIR="research-paper/data/sessions"
-PACKAGE_NAME="com.weareheadset.MetaColocationDemos_Official"
+PACKAGE_NAME="com.jJFiisJ.ArenaShooting"
 
 # Find ADB
 if command -v adb &> /dev/null; then
