@@ -1,7 +1,6 @@
 {
   "dependencies": {
-    "com.veriorpies.parrelsync": "https://github.com/VeriorPies/ParrelSync.git?path=/ParrelSync",
-    "com.ivanmurzak.unity.mcp": "0.25.1",
+    "com.ivanmurzak.unity.mcp": "0.28.0",
     "com.meta.xr.mrutilitykit": "81.0.0",
     "com.meta.xr.sdk.avatars": "40.0.1",
     "com.meta.xr.sdk.avatars.sample.assets": "38.0.1",
@@ -19,6 +18,7 @@
     "com.unity.xr.meta-openxr": "2.3.0",
     "com.unity.xr.mock-hmd": "1.4.0-preview.2",
     "com.unity.xr.openxr": "1.15.0",
+    "com.veriorpies.parrelsync": "https://github.com/VeriorPies/ParrelSync.git?path=/ParrelSync",
     "com.unity.modules.accessibility": "1.0.0",
     "com.unity.modules.ai": "1.0.0",
     "com.unity.modules.androidjni": "1.0.0",

@@ -1,0 +1,23 @@
+# ninja log v5
+1	2401	7875039710249001	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	bddc3c10dcae6ba6
+75	582	7875039691977623	FramePacing/CMakeFiles/swappywrapper.dir/UnitySwappyWrapper.cpp.o	bd399a46711c5456
+62	2264	7875039708893479	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	14c5055cf8b28542
+15	1927	7875039705447754	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	9a7d4f8a29dc4cd2
+589	911	7875039695041095	C:/github/unity-shooting-arena-co-location/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/4c6t652f/obj/arm64-v8a/libswappywrapper.so	ad8e7489ab43e50a
+43	1896	7875039704931432	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	ba73736e20302c4b
+22	1905	7875039705096997	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	70610ca86c1c6d2e
+9	2003	7875039706273383	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	24ea9a7fa42b55ec
+52	1946	7875039705600588	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	ff4d92db98429e01
+29	2275	7875039708994011	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	13c2120839da5301
+2401	2519	7875039711481056	C:/github/unity-shooting-arena-co-location/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/4c6t652f/obj/arm64-v8a/libgame.so	3b78819671e59b5
+81	383	7875049280622102	FramePacing/CMakeFiles/swappywrapper.dir/UnitySwappyWrapper.cpp.o	bd399a46711c5456
+383	721	7875049283509178	C:/github/unity-shooting-arena-co-location/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/4c6t652f/obj/arm64-v8a/libswappywrapper.so	ad8e7489ab43e50a
+13	1854	7875049295367556	GameActivity/CMakeFiles/game.dir/UGAEntry.cpp.o	70610ca86c1c6d2e
+61	1880	7875049295654928	GameActivity/CMakeFiles/game.dir/UGAInputKeyEvent.cpp.o	ba73736e20302c4b
+52	1919	7875049296047854	GameActivity/CMakeFiles/game.dir/UGAInputMotionEvent.cpp.o	ff4d92db98429e01
+35	1947	7875049296324526	GameActivity/CMakeFiles/game.dir/UGAConfiguration.cpp.o	9a7d4f8a29dc4cd2
+28	1988	7875049296692099	GameActivity/CMakeFiles/game.dir/UGADebug.cpp.o	24ea9a7fa42b55ec
+72	2060	7875049297459442	GameActivity/CMakeFiles/game.dir/UGASoftKeyboard.cpp.o	14c5055cf8b28542
+43	2192	7875049298748707	GameActivity/CMakeFiles/game.dir/UGAInput.cpp.o	13c2120839da5301
+21	2303	7875049299866978	GameActivity/CMakeFiles/game.dir/UGAApplication.cpp.o	bddc3c10dcae6ba6
+2304	2391	7875049300812964	C:/github/unity-shooting-arena-co-location/Library/Bee/Android/Prj/IL2CPP/Gradle/unityLibrary/build/intermediates/cxx/RelWithDebInfo/4c6t652f/obj/arm64-v8a/libgame.so	3b78819671e59b5
