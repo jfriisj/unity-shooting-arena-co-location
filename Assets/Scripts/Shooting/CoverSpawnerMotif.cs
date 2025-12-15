@@ -5,13 +5,13 @@ using Fusion;
 using UnityEngine;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace Arena.SharedActivities.ShootingSample
 {
     /// <summary>
     /// Allows the host to spawn cover objects in the arena.
     /// Point with controller and press grip to place cover.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class CoverSpawnerMotif : MonoBehaviour
     {
         [Header("Spawning Settings")]

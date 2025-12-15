@@ -7,13 +7,13 @@ using System.Reflection;
 using Meta.XR.Samples;
 using Meta.XR.MultiplayerBlocks.Fusion;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace Arena.SharedActivities.ShootingSample
 {
     /// <summary>
     /// Enables single-player practice mode for testing shooting mechanics without networking.
     /// When enabled, spawns AI targets for the player to shoot at.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class PracticeModeMotif : MonoBehaviour
     {
         [Header("Practice Mode Settings")]

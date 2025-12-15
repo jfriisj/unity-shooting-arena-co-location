@@ -6,16 +6,16 @@ using UnityEngine;
 using System.Collections;
 using Meta.XR.MultiplayerBlocks.Fusion;
 using Meta.XR.Samples;
-using MRMotifs.SharedActivities.Avatars;
+using Arena.SharedActivities.Avatars;
 
-namespace MRMotifs.SharedActivities.Spawning
+namespace Arena.SharedActivities.Spawning
 {
     /// <summary>
     /// Manages the spawn locations for players in a multiplayer session. Controls the
     /// queuing system for players waiting for an available spawn location and ensures
     /// avatars are placed correctly at available locations.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class SpawnManagerMotif : NetworkBehaviour
     {
         [Tooltip("When enabled, players spawn at their current physical location instead of predefined spawn points. Best for colocation experiences.")]

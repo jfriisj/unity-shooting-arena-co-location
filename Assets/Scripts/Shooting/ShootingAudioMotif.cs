@@ -4,14 +4,14 @@
 using UnityEngine;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace Arena.SharedActivities.ShootingSample
 {
     /// <summary>
     /// Loads and provides audio clips for the shooting game from Resources/Audio folder.
     /// Attach to the [MR Motif] Shooting Game Manager to auto-assign sounds.
     /// Audio files should be placed in Assets/Resources/Audio/ folder.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class ShootingAudioMotif : MonoBehaviour
     {
         [Header("Audio Settings")]

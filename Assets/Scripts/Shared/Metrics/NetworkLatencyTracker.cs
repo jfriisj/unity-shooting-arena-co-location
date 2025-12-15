@@ -7,13 +7,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.Metrics
+namespace Arena.SharedActivities.Metrics
 {
     /// <summary>
     /// Measures network latency using RPC ping/pong messages.
     /// Must be attached to a NetworkObject for proper functionality.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class NetworkLatencyTracker : NetworkBehaviour
     {
         #region Serialized Fields

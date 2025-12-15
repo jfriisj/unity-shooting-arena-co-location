@@ -7,13 +7,13 @@ using UnityEngine.UI;
 using TMPro;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace Arena.SharedActivities.ShootingSample
 {
     /// <summary>
     /// Displays player HUD showing health, ammo, and score.
     /// Attaches to the camera rig and follows the player's view.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class ShootingHUDMotif : MonoBehaviour
     {
         [Header("UI References")]

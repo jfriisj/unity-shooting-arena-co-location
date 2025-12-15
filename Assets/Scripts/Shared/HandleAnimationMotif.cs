@@ -5,12 +5,12 @@ using Meta.XR.Samples;
 using Oculus.Interaction;
 using UnityEngine;
 
-namespace MRMotifs.SharedActivities.Helpers
+namespace Arena.SharedActivities.Helpers
 {
     /// <summary>
     /// Manages scaling and alpha transitions for an object over time, using a coroutine to animate the object smoothly.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class HandleAnimationMotif : MonoBehaviour
     {
         [Tooltip("Interactable Unity Event Wrapper to call the animation methods from.")]

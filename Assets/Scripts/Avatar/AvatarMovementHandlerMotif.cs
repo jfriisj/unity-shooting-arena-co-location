@@ -10,16 +10,16 @@ using System.Collections.Generic;
 using Meta.XR.MultiplayerBlocks.Fusion;
 using Meta.XR.MultiplayerBlocks.Shared;
 using Meta.XR.Samples;
-using MRMotifs.SharedActivities.Spawning;
+using Arena.SharedActivities.Spawning;
 
-namespace MRMotifs.SharedActivities.Avatars
+namespace Arena.SharedActivities.Avatars
 {
     /// <summary>
     /// Handles synchronization of avatar positions and rotations across networked clients.
     /// Manages the interaction between avatars and the object of interest, ensuring avatars
     /// are correctly positioned relative to the object and updated whenever the object is moved.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class AvatarMovementHandlerMotif : NetworkBehaviour
     {
         /// <summary>

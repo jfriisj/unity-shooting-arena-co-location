@@ -6,13 +6,13 @@ using UnityEngine;
 using System.Collections;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace Arena.SharedActivities.ShootingSample
 {
     /// <summary>
     /// Represents a networked bullet/projectile in the shooting game.
     /// Handles physics, collision detection, hit registration, and visual effects.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     [RequireComponent(typeof(Rigidbody))]
     public class BulletMotif : NetworkBehaviour
     {

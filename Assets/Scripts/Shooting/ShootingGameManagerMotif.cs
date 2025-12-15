@@ -7,13 +7,13 @@ using System.Collections.Generic;
 using TMPro;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace Arena.SharedActivities.ShootingSample
 {
     /// <summary>
     /// Manages the shooting game state, including round management,
     /// scoring, and UI updates. Coordinates between all players.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class ShootingGameManagerMotif : NetworkBehaviour
     {
         [Header("Game Settings")]

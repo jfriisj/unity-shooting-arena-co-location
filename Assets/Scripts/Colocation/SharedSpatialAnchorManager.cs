@@ -6,10 +6,9 @@ using System;
 using UnityEngine;
 using Meta.XR.Samples;
 using System.Threading.Tasks;
-using System.Collections;
 using System.Collections.Generic;
 
-namespace MRMotifs.ColocatedExperiences.Colocation
+namespace Arena.ColocatedExperiences.Colocation
 {
     public enum AnchorPlacementMode
     {
@@ -18,7 +17,7 @@ namespace MRMotifs.ColocatedExperiences.Colocation
         ManualPlacement     // Wait for host to trigger placement with controller
     }
 
-    [MetaCodeSample("MRMotifs-ColocatedExperiences")]
+    [MetaCodeSample("Arena-ColocatedExperiences")]
     public class SharedSpatialAnchorManager : NetworkBehaviour
     {
         [Header("Anchor Placement Settings")]
@@ -79,20 +78,14 @@ namespace MRMotifs.ColocatedExperiences.Colocation
 
         private void PrepareColocation()
         {
-            // Use IsSharedModeMasterClient for Shared Mode to determine who hosts colocation
-            // This is more reliable than HasStateAuthority in Shared Mode
-            bool isMasterClient = Runner != null && Runner.IsSharedModeMasterClient;
-            
-            Debug.Log($"Motif: PrepareColocation - IsMasterClient: {isMasterClient}, HasStateAuthority: {Object.HasStateAuthority}, PlayerCount: {Runner?.SessionInfo?.PlayerCount ?? 0}");
-            
-            if (isMasterClient)
+            if (Object.HasStateAuthority)
             {
-                Debug.Log("Motif: Starting advertisement (Master Client)...");
+                Debug.Log("Motif: Starting advertisement...");
                 AdvertiseColocationSession();
             }
             else
             {
-                Debug.Log("Motif: Starting discovery (Client)...");
+                Debug.Log("Motif: Starting discovery...");
                 DiscoverNearbySession();
             }
         }
@@ -163,13 +156,9 @@ namespace MRMotifs.ColocatedExperiences.Colocation
 
         private async void DiscoverNearbySession()
         {
-            // Wait a moment to ensure the master client has started advertising
-            await System.Threading.Tasks.Task.Delay(2000);
-            
             m_discoveryStartTime = DateTime.Now;
             OVRColocationSession.ColocationSessionDiscovered += OnColocationSessionDiscovered;
 
-            Debug.Log("Motif: Starting colocation discovery...");
             var discoveryResult = await OVRColocationSession.StartDiscoveryAsync();
             if (!discoveryResult.Success)
             {
@@ -177,20 +166,7 @@ namespace MRMotifs.ColocatedExperiences.Colocation
                 return;
             }
 
-            Debug.Log("Motif: Discovery started successfully. Waiting for nearby session...");
-            
-            // Start a timeout coroutine to retry if discovery takes too long
-            StartCoroutine(DiscoveryTimeoutCheck());
-        }
-        
-        private IEnumerator DiscoveryTimeoutCheck()
-        {
-            yield return new WaitForSeconds(15f);
-            
-            // If we still haven't discovered after 15 seconds, log a warning
-            TimeSpan elapsed = DateTime.Now - m_discoveryStartTime;
-            Debug.LogWarning($"Motif: Discovery timeout check - elapsed {elapsed.TotalSeconds:F1}s. " +
-                "Make sure both headsets are in the same physical space and Bluetooth is enabled.");
+            Debug.Log("Motif: Discovery started successfully.");
         }
 
         private void OnColocationSessionDiscovered(OVRColocationSession.Data session)
@@ -256,12 +232,6 @@ namespace MRMotifs.ColocatedExperiences.Colocation
             {
                 Debug.LogError("Motif: Anchor is not localized. Cannot proceed with sharing.");
                 return;
-            }
-            
-            // Register host calibration for drift tracking
-            if (m_colocationManager != null)
-            {
-                m_colocationManager.RegisterHostCalibration(anchorPosition);
             }
 
             var saveResult = await anchor.SaveAnchorAsync();

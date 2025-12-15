@@ -9,13 +9,13 @@ using System.Collections.Generic;
 using UnityEngine;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.Metrics
+namespace Arena.SharedActivities.Metrics
 {
     /// <summary>
     /// Collects and logs performance and collaboration metrics for research data collection.
     /// Saves data to CSV files on the device for later extraction.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class MetricsLogger : MonoBehaviour
     {
         #region Serialized Fields
@@ -394,7 +394,7 @@ namespace MRMotifs.SharedActivities.Metrics
             }
             
             // Fallback: try to find ColocationManager
-            var colocationManager = FindAnyObjectByType<MRMotifs.ColocatedExperiences.Colocation.ColocationManager>();
+            var colocationManager = FindAnyObjectByType<Arena.ColocatedExperiences.Colocation.ColocationManager>();
             if (colocationManager != null)
             {
                 return colocationManager.GetCurrentCalibrationError();

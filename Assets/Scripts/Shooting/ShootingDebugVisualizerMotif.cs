@@ -7,14 +7,14 @@ using System.Collections.Generic;
 using TMPro;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace Arena.SharedActivities.ShootingSample
 {
     /// <summary>
     /// Debug visualization for the shooting game.
     /// Shows player positions, health bars, bullet trajectories, and game state.
     /// Toggle with both thumbstick buttons pressed simultaneously.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class ShootingDebugVisualizerMotif : MonoBehaviour
     {
         [Header("Debug Settings")]

@@ -5,13 +5,13 @@ using UnityEngine;
 using System;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.Metrics
+namespace Arena.SharedActivities.Metrics
 {
     /// <summary>
     /// Tracks spatial calibration accuracy for colocation.
     /// Monitors drift and alignment errors over time.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class CalibrationAccuracyTracker : MonoBehaviour
     {
         #region Serialized Fields
@@ -34,7 +34,7 @@ namespace MRMotifs.SharedActivities.Metrics
         
         #region Private Fields
         
-        private MRMotifs.ColocatedExperiences.Colocation.ColocationManager m_colocationManager;
+        private Arena.ColocatedExperiences.Colocation.ColocationManager m_colocationManager;
         private OVRCameraRig m_cameraRig;
         
         private bool m_hasCalibrated;
@@ -61,7 +61,7 @@ namespace MRMotifs.SharedActivities.Metrics
         
         private void Start()
         {
-            m_colocationManager = FindAnyObjectByType<MRMotifs.ColocatedExperiences.Colocation.ColocationManager>();
+            m_colocationManager = FindAnyObjectByType<Arena.ColocatedExperiences.Colocation.ColocationManager>();
             m_cameraRig = FindAnyObjectByType<OVRCameraRig>();
             
             if (m_colocationManager == null)

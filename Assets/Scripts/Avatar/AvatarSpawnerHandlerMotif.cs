@@ -7,15 +7,15 @@ using System.Collections;
 using Meta.XR.MultiplayerBlocks.Shared;
 using Meta.XR.MultiplayerBlocks.Fusion;
 using Meta.XR.Samples;
-using MRMotifs.SharedActivities.Spawning;
+using Arena.SharedActivities.Spawning;
 
-namespace MRMotifs.SharedActivities.Avatars
+namespace Arena.SharedActivities.Avatars
 {
     /// <summary>
     /// Handles the spawning of avatars in the scene, managing their positions using the spawn manager.
     /// Also, responsible for releasing spawn locations when players leave the scene.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class AvatarSpawnerHandlerMotif : MonoBehaviour
     {
         [Tooltip("Reference to the SpawnManagerMotif, which manages the spawn locations and queues.")]

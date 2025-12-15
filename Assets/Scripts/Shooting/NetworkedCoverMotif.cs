@@ -5,13 +5,13 @@ using Fusion;
 using UnityEngine;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace Arena.SharedActivities.ShootingSample
 {
     /// <summary>
     /// A networked cover object that can be spawned by the host.
     /// Provides physical barriers for players to hide behind in large open spaces.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class NetworkedCoverMotif : NetworkBehaviour
     {
         [Header("Cover Settings")]

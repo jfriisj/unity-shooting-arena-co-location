@@ -6,10 +6,10 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Fusion;
 using Fusion.Sockets;
-using MRMotifs.SharedActivities.ShootingSample;
+using Arena.SharedActivities.ShootingSample;
 using UnityEngine;
 
-namespace MRMotifs.SharedActivities.Network
+namespace Arena.SharedActivities.Network
 {
     /// <summary>
     /// Handles Host Migration for the shooting game.

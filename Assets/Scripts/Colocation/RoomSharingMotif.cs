@@ -8,14 +8,14 @@ using System.Threading.Tasks;
 using Meta.XR.Samples;
 using Meta.XR.MRUtilityKit;
 
-namespace MRMotifs.ColocatedExperiences.Colocation
+namespace Arena.ColocatedExperiences.Colocation
 {
     /// <summary>
     /// Handles sharing and loading of room mesh data across co-located players.
     /// When the host creates the colocation session, their room is shared.
     /// Guests load the shared room to ensure consistent collision geometry.
     /// </summary>
-    [MetaCodeSample("MRMotifs-ColocatedExperiences")]
+    [MetaCodeSample("Arena-ColocatedExperiences")]
     public class RoomSharingMotif : NetworkBehaviour
     {
         [Header("Room Sharing Settings")]

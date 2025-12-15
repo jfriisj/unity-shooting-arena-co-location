@@ -7,14 +7,14 @@ using Oculus.Platform;
 using Oculus.Platform.BuildingBlocks;
 using UnityEngine.SceneManagement;
 
-namespace MRMotifs.SharedActivities.QuestPlatform
+namespace Arena.SharedActivities.QuestPlatform
 {
     /// <summary>
     /// The InvitationAcceptanceHandlerMotif class handles deep link invitations using the Oculus Platform SDK.
     /// When the application is launched via a deep link (e.g., an invitation from a friend), it checks the launch
     /// details to determine if the user should be directed to a specific destination.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class InvitationAcceptanceHandlerMotif : MonoBehaviour
     {
         [SerializeField] private EntitlementCheck entitlementCheck;

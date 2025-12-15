@@ -4,14 +4,14 @@
 using UnityEngine;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace Arena.SharedActivities.ShootingSample
 {
     /// <summary>
     /// Central configuration for the shooting game.
     /// Modify these values to tune gameplay without editing multiple scripts.
     /// Attach to the [MR Motif] Shooting Game Manager GameObject.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class ShootingGameConfigMotif : MonoBehaviour
     {
         [Header("=== GAME RULES ===")]

@@ -3,7 +3,7 @@
 using UnityEngine;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace Arena.SharedActivities.ShootingSample
 {
     /// <summary>
     /// Disables the Quest Guardian boundary system to allow free movement in passthrough mode.
@@ -18,7 +18,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
     /// For fully boundaryless apps (no VR segments at all), add to AndroidManifest.xml instead:
     /// <uses-feature android:name="com.oculus.feature.BOUNDARYLESS_APP" android:required="true"/>
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class BoundaryDisablerMotif : MonoBehaviour
     {
         [Tooltip("If true, the boundary will be suppressed when passthrough is active.")]

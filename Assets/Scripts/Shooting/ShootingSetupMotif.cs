@@ -6,15 +6,15 @@ using UnityEngine;
 using Meta.XR.MultiplayerBlocks.Shared;
 using Meta.XR.MultiplayerBlocks.Fusion;
 using Meta.XR.Samples;
-using MRMotifs.SharedActivities.Spawning;
+using Arena.SharedActivities.Spawning;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace Arena.SharedActivities.ShootingSample
 {
     /// <summary>
     /// Scene-based setup for the shooting game. Attaches shooting components to players
     /// when their avatars spawn. Place this in the scene alongside the Avatar Spawner Handler.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class ShootingSetupMotif : MonoBehaviour
     {
         [Header("Prefabs")]
@@ -33,6 +33,12 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
         [Tooltip("Scale of the weapon model.")]
         [SerializeField] private float m_weaponScale = 0.8f;
+
+        [Header("Effects")]
+        [Tooltip("Muzzle flash particle prefab.")]
+        [SerializeField] private GameObject m_muzzleFlashPrefab;
+        [Tooltip("Shell casing prefab.")]
+        [SerializeField] private GameObject m_casingPrefab;
 
         private NetworkRunner m_networkRunner;
         private SpawnManagerMotif m_spawnManager;
@@ -131,6 +137,9 @@ namespace MRMotifs.SharedActivities.ShootingSample
             {
                 shootingPlayer.SetBulletPrefab(m_bulletPrefab);
             }
+
+            // Configure effects
+            shootingPlayer.SetEffects(m_muzzleFlashPrefab, m_casingPrefab);
 
             // Configure weapon visuals
             if (m_weaponPrefab != null)

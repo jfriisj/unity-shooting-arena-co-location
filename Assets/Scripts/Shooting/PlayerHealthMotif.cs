@@ -7,13 +7,13 @@ using System;
 using System.Collections;
 using Meta.XR.Samples;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace Arena.SharedActivities.ShootingSample
 {
     /// <summary>
     /// Manages player health, death, and respawn in the shooting game.
     /// Synchronizes health state across networked clients and handles scoring.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class PlayerHealthMotif : NetworkBehaviour
     {
         // Static configuration from ShootingGameConfigMotif

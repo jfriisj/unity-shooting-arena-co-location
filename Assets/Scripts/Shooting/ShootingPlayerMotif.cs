@@ -6,14 +6,14 @@ using UnityEngine;
 using Meta.XR.Samples;
 using Meta.XR.MultiplayerBlocks.Fusion;
 
-namespace MRMotifs.SharedActivities.ShootingSample
+namespace Arena.SharedActivities.ShootingSample
 {
     /// <summary>
     /// Handles player shooting mechanics in a co-located multiplayer shooting game.
     /// Spawns networked projectiles when the player presses the trigger and manages
     /// the player's weapon visuals locally.
     /// </summary>
-    [MetaCodeSample("MRMotifs-SharedActivities")]
+    [MetaCodeSample("Arena-SharedActivities")]
     public class ShootingPlayerMotif : MonoBehaviour
     {
         // Static configuration from ShootingGameConfigMotif
@@ -54,6 +54,18 @@ namespace MRMotifs.SharedActivities.ShootingSample
         [Tooltip("Scale of the weapon model.")]
         [SerializeField] private float m_weaponScale = 0.8f;
 
+        [Header("Effects")]
+        [Tooltip("Particle system prefab for muzzle flash.")]
+        [SerializeField] private GameObject m_muzzleFlashPrefab;
+
+        [Tooltip("Shell casing prefab to eject.")]
+        [SerializeField] private GameObject m_casingPrefab;
+
+        [Header("Ammo")]
+        [Tooltip("Maximum ammo per clip.")]
+        [SerializeField] private int m_maxAmmo = 15;
+        private int m_currentAmmo;
+
         [Header("References")]
         [Tooltip("Transform used as the firing point (controller or hand).")]
         [SerializeField] private Transform m_leftFirePoint;
@@ -69,6 +81,8 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private GameObject m_leftWeaponInstance;
         private Transform m_rightMuzzle;
         private Transform m_leftMuzzle;
+        private Transform m_rightEjectionPort;
+        private Transform m_leftEjectionPort;
         private NetworkRunner m_networkRunner;
         private AudioSource m_spawnedAudioSource;
 
@@ -83,6 +97,8 @@ namespace MRMotifs.SharedActivities.ShootingSample
             if (ConfigFireRate > 0) m_fireRate = ConfigFireRate;
             if (ConfigBulletSpeed > 0) m_fireForce = ConfigBulletSpeed;
             if (ConfigBulletLifetime > 0) m_bulletLifetime = ConfigBulletLifetime;
+
+            m_currentAmmo = m_maxAmmo;
 
             m_cameraRig = FindAnyObjectByType<OVRCameraRig>();
             m_playerHealth = GetComponent<PlayerHealthMotif>();
@@ -154,6 +170,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
                 // Try to find muzzle point for accurate bullet spawning
                 m_rightMuzzle = FindMuzzlePoint(m_rightWeaponInstance);
+                m_rightEjectionPort = FindEjectionPoint(m_rightWeaponInstance);
                 Debug.Log($"[ShootingPlayerMotif] Right weapon spawned at {m_rightFirePoint.name}");
             }
 
@@ -172,6 +189,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 m_leftWeaponInstance.transform.localScale = localScale;
 
                 m_leftMuzzle = FindMuzzlePoint(m_leftWeaponInstance);
+                m_leftEjectionPort = FindEjectionPoint(m_leftWeaponInstance);
                 Debug.Log($"[ShootingPlayerMotif] Left weapon spawned at {m_leftFirePoint.name}");
             }
 
@@ -255,7 +273,7 @@ namespace MRMotifs.SharedActivities.ShootingSample
         private Transform FindMuzzlePoint(GameObject weapon)
         {
             // Look for common muzzle point names
-            var muzzleNames = new[] { "Muzzle", "muzzle", "FirePoint", "firePoint", "MuzzlePoint", "Barrel" };
+            var muzzleNames = new[] { "BarrelExitPoint", "Muzzle", "muzzle", "FirePoint", "firePoint", "MuzzlePoint", "Barrel" };
             foreach (var name in muzzleNames)
             {
                 var muzzle = weapon.transform.Find(name);
@@ -270,6 +288,20 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 {
                     return muzzle;
                 }
+            }
+            return null;
+        }
+
+        private Transform FindEjectionPoint(GameObject weapon)
+        {
+            var names = new[] { "EjectionPortPoint", "EjectionPort", "ShellEject", "ShellPoint" };
+            foreach (var name in names)
+            {
+                var point = weapon.transform.Find(name);
+                if (point != null) return point;
+                
+                point = FindChildRecursive(weapon.transform, name);
+                if (point != null) return point;
             }
             return null;
         }
@@ -304,6 +336,12 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
         private void HandleShootingInput()
         {
+            // Reload input (Button A or X)
+            if (OVRInput.GetDown(OVRInput.Button.One) || OVRInput.GetDown(OVRInput.Button.Three))
+            {
+                Reload();
+            }
+
             // Check for trigger input on either controller - support dual wielding
             var leftTrigger = OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.LTouch);
             var rightTrigger = OVRInput.Get(OVRInput.Button.PrimaryIndexTrigger, OVRInput.Controller.RTouch);
@@ -336,6 +374,12 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
         private void FireBullet(Transform firePoint, Transform directionSource, bool isLeft)
         {
+            if (m_currentAmmo <= 0)
+            {
+                // TODO: Play empty click sound
+                return;
+            }
+
             if (firePoint == null || m_bulletPrefab == null)
             {
                 Debug.LogWarning($"[ShootingPlayerMotif] Cannot fire! firePoint: {firePoint != null}, bulletPrefab: {m_bulletPrefab != null}");
@@ -347,6 +391,8 @@ namespace MRMotifs.SharedActivities.ShootingSample
                 m_lastLeftFireTime = Time.time;
             else
                 m_lastRightFireTime = Time.time;
+
+            m_currentAmmo--;
 
             // Use direction from controller/hand, not necessarily muzzle
             var direction = directionSource != null ? directionSource.forward : firePoint.forward;
@@ -386,6 +432,9 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
             // Play fire sound
             PlayFireSound();
+
+            // Play visual effects
+            PlayFireEffects(firePoint, isLeft);
         }
 
         /// <summary>
@@ -454,6 +503,12 @@ namespace MRMotifs.SharedActivities.ShootingSample
             m_weaponScale = scale;
         }
 
+        public void SetEffects(GameObject muzzleFlashPrefab, GameObject casingPrefab)
+        {
+            m_muzzleFlashPrefab = muzzleFlashPrefab;
+            m_casingPrefab = casingPrefab;
+        }
+
         /// <summary>
         /// Manually spawns weapon models if ConfigureWeapon was called after Start().
         /// </summary>
@@ -491,6 +546,49 @@ namespace MRMotifs.SharedActivities.ShootingSample
 
             // Spawn new weapons
             SpawnWeaponModels();
+        }
+
+        private void PlayFireEffects(Transform firePoint, bool isLeft)
+        {
+            // Muzzle Flash
+            if (m_muzzleFlashPrefab != null && firePoint != null)
+            {
+                var flash = Instantiate(m_muzzleFlashPrefab, firePoint.position, firePoint.rotation, firePoint);
+                // Ensure it doesn't loop if prefab is set to loop
+                var ps = flash.GetComponent<ParticleSystem>();
+                if (ps != null) 
+                {
+                    var main = ps.main;
+                    main.loop = false;
+                    ps.Play();
+                }
+                Destroy(flash, 2f);
+            }
+
+            // Eject Casing
+            Transform ejectionPoint = isLeft ? m_leftEjectionPort : m_rightEjectionPort;
+            // Fallback to firePoint if no ejection port
+            if (ejectionPoint == null) ejectionPoint = firePoint;
+
+            if (m_casingPrefab != null && ejectionPoint != null)
+            {
+                GameObject shell = Instantiate(m_casingPrefab, ejectionPoint.position, ejectionPoint.rotation);
+                Rigidbody rb = shell.GetComponent<Rigidbody>();
+                if (rb != null)
+                {
+                    // Eject to the right relative to the port
+                    rb.AddForce(ejectionPoint.right * 2f + Vector3.up * 1f, ForceMode.Impulse);
+                    rb.AddTorque(Random.insideUnitSphere * 10f);
+                }
+                Destroy(shell, 3f);
+            }
+        }
+
+        public void Reload()
+        {
+            m_currentAmmo = m_maxAmmo;
+            // Play reload sound if available
+            Debug.Log("[ShootingPlayerMotif] Reloaded!");
         }
     }
 }
