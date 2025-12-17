@@ -1,10 +1,10 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.12.9)  9 DEC 2025 20:44
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.12.9)  17 DEC 2025 09:38
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
  %&-line parsing enabled.
-**c:/github/shooting/research-paper/main.tex
-(c:/github/shooting/research-paper/main.tex
+**c:/github/unity-shooting-arena-co-location/research-paper/main.tex
+(c:/github/unity-shooting-arena-co-location/research-paper/main.tex
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-04>
 (C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex/latex/ieeetran\IEEEtran.cls
@@ -229,10 +229,17 @@ Package xcolor Info: Model `tHsb' substituted by `hsb' on input line 1370.
 Package xcolor Info: Model `HSB' substituted by `hsb' on input line 1371.
 Package xcolor Info: Model `Gray' substituted by `gray' on input line 1372.
 Package xcolor Info: Model `wave' substituted by `hsb' on input line 1373.
+) (C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex/latex/float\float.sty
+Package: float 2001/11/08 v1.3d Float enhancements (AL)
+\c@float@type=\count284
+\float@exts=\toks24
+\float@box=\box55
+\@float@everytoks=\toks25
+\@floatcapt=\box56
 )) (C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex/latex/l3backend\l3backend-pdftex.def
 File: l3backend-pdftex.def 2024-01-04 L3 backend support: PDF output (pdfTeX)
-\l__color_backend_stack_int=\count284
-\l__pdf_internal_box=\box55
+\l__color_backend_stack_int=\count285
+\l__pdf_internal_box=\box57
 ) (main.aux)
 \openout1 = `main.aux'.
 
@@ -254,59 +261,66 @@ LaTeX Font Info:    ... okay on input line 7.
 -- Lines per column: 56 (exact).
 (C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex/context/base/mkii\supp-pdf.mkii
 [Loading MPS to PDF converter (version 2006.09.02).]
-\scratchcounter=\count285
+\scratchcounter=\count286
 \scratchdimen=\dimen175
-\scratchbox=\box56
-\nofMPsegments=\count286
-\nofMParguments=\count287
-\everyMPshowfont=\toks24
-\MPscratchCnt=\count288
+\scratchbox=\box58
+\nofMPsegments=\count287
+\nofMParguments=\count288
+\everyMPshowfont=\toks26
+\MPscratchCnt=\count289
 \MPscratchDim=\dimen176
-\MPnumerator=\count289
-\makeMPintoPDFobject=\count290
-\everyMPtoPDFconversion=\toks25
+\MPnumerator=\count290
+\makeMPintoPDFobject=\count291
+\everyMPtoPDFconversion=\toks27
 ) (C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex/latex/epstopdf-pkg\epstopdf-base.sty
 Package: epstopdf-base 2020-01-24 v2.11 Base part for package epstopdf
 Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 485.
  (C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex/latex/00miktex\epstopdf-sys.cfg
 File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
 )) (titlepage.tex) (abstract.tex) (keywords.tex) (introduction.tex
-LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 4.
+LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 5.
  (C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
 )
-LaTeX Font Info:    Trying to load font information for U+msa on input line 4.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 5.
  (C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 4.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 5.
  (C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-LaTeX Font Info:    Trying to load font information for OML+ptm on input line 9.
+LaTeX Font Info:    Trying to load font information for OML+ptm on input line 10.
  (C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\omlptm.fd
 File: omlptm.fd 
 )
 LaTeX Font Info:    Font shape `OML/ptm/m/n' in size <10> not available
-(Font)              Font shape `OML/cmm/m/it' tried instead on input line 9.
+(Font)              Font shape `OML/cmm/m/it' tried instead on input line 10.
  [1{C:/Users/jonfriis/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc}
 
 
 ]) (stateoftheart.tex) (approach.tex
-Underfull \hbox (badness 5175) in paragraph at lines 21--22
-[]\OT1/ptm/b/n/10 Universal Ren-der Pipeline (URP): \OT1/ptm/m/n/10 Performance-
- []
+LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 13.
+ (C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ot1pcr.fd
+File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
+)
+<figures/shared_space.png, id=12, 2794.44pt x 1541.76pt>
+File: figures/shared_space.png Graphic file (type png)
+<use figures/shared_space.png>
+Package pdftex.def Info: figures/shared_space.png  used on input line 19.
+(pdftex.def)             Requested size: 252.0pt x 139.03471pt.
+) (prototype.tex [2 <./figures/shared_space.png (PNG copy)>]
+<figures/architecture_diagram.png, id=18, 4312.11pt x 3442.8625pt>
+File: figures/architecture_diagram.png Graphic file (type png)
+<use figures/architecture_diagram.png>
+Package pdftex.def Info: figures/architecture_diagram.png  used on input line 14.
+(pdftex.def)             Requested size: 252.0pt x 201.15186pt.
 
-) (prototype.tex [2]
-Underfull \hbox (badness 1515) in paragraph at lines 105--106
+Underfull \hbox (badness 1515) in paragraph at lines 31--32
  \OT1/ptm/m/it/10 2) Game-play Me-chan-ics: [][] \OT1/ptm/m/n/10 Play-ers col-lab-o-rate to shoot
  []
 
-) (results.tex [3]
-
-LaTeX Warning: `h' float specifier changed to `ht'.
-
-) (conclusion.tex) [4] (main.bbl
+) (results.tex [3 <./figures/architecture_diagram.png>]) (conclusion.tex [4]) (main.bbl
 ** WARNING: IEEEtran.bst: No hyphenation pattern has been
 ** loaded for the language `eng'. Using the pattern for
 ** the default language instead.
@@ -349,7 +363,7 @@ LaTeX Warning: `h' float specifier changed to `ht'.
 ** WARNING: IEEEtran.bst: No hyphenation pattern has been
 ** loaded for the language `eng'. Using the pattern for
 ** the default language instead.
-)
+) (contributions.tex)
 
 ** Conference Paper **
 Before submitting the final camera ready copy, remember to:
@@ -361,26 +375,24 @@ Before submitting the final camera ready copy, remember to:
  uses only Type 1 fonts and that every step in the generation
  process uses the appropriate paper size.
 
-[5
-
-] (main.aux)
+[5] (main.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-04>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 4325 strings out of 474486
- 69499 string characters out of 5742339
- 1947542 words of memory out of 5000000
- 26536 multiletter control sequences out of 15000+600000
- 597623 words of font info for 110 fonts, out of 8000000 for 9000
+ 4459 strings out of 474486
+ 72407 string characters out of 5742339
+ 1946542 words of memory out of 5000000
+ 26658 multiletter control sequences out of 15000+600000
+ 598138 words of font info for 112 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 62i,10n,68p,1764b,263s stack positions out of 10000i,1000n,20000p,200000b,200000s
-<C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi8.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr8.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy8.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msam10.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmbi8a.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (5 pages, 167401 bytes).
+ 62i,9n,68p,1788b,263s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi8.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr8.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy8.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/urw/courier/ucrr8a.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmbi8a.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb>
+Output written on main.pdf (5 pages, 5669911 bytes).
 PDF statistics:
- 79 PDF objects out of 1000 (max. 8388607)
+ 83 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
- 1 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 11 words of extra memory for PDF output out of 10000 (max. 10000000)
 

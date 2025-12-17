@@ -1,135 +1,50 @@
-% \section{Experimental prototype}
-% Describe the specific use-case you worked with and the experimental prototype you have built.
-
-% \subsection{Equations}
-% This is an equation:
-% \begin{equation}
-% a+b=\gamma\label{eq}
-% \end{equation}
-
-% \begin{table}[htbp]
-% \caption{This is a table}
-% \begin{center}
-% \begin{tabular}{|c|c|c|c|}
-% \hline
-% \textbf{Table}&\multicolumn{3}{|c|}{\textbf{Table Column Head}} \\
-% \cline{2-4} 
-% \textbf{Head} & \textbf{Table column subhead}& \textbf{Subhead}& \textbf{Subhead} \\
-% \hline
-% text & text & text & text \\
-% \hline
-% \end{tabular}
-% \label{tab1}
-% \end{center}
-% \end{table}
-
-% \begin{figure}[htbp]
-% % \centerline{\includegraphics{fig1.png}}
-% \caption{Example of a figure caption.}
-% \label{fig}
-% \end{figure}
-% \section{Experimental prototype}
-% Describe the specific use-case you worked with and the experimental prototype you have built.
-
-% \subsection{Equations}
-% This is an equation:
-% \begin{equation}
-% a+b=\gamma\label{eq}
-% \end{equation}
-
-% \begin{table}[htbp]
-% \caption{This is a table}
-% \begin{center}
-% \begin{tabular}{|c|c|c|c|}
-% \hline
-% \textbf{Table}&\multicolumn{3}{|c|}{\textbf{Table Column Head}} \\
-% \cline{2-4} 
-% \textbf{Head} & \textbf{Table column subhead}& \textbf{Subhead}& \textbf{Subhead} \\
-% \hline
-% text & text & text & text \\
-% \hline
-% \end{tabular}
-% \label{tab1}
-% \end{center}
-% \end{table}
-
-% \begin{figure}[htbp]
-% % \centerline{\includegraphics{fig1.png}}
-% \caption{Example of a figure caption.}
-% \label{fig}
-% \end{figure}
 \section{Experimental Prototype}
 
-This section describes the implementation of the 3-user co-located VR training system, specifically the "Shooting Game" scenario developed for this study. Designed as a representative proxy for professional collaborative training tasks, the application places three co-located users in a shared virtual arena where they must coordinate to neutralize waves of aerial drones. This scenario was chosen to impose significant demands on the system's networking and spatial alignment capabilities: the fast-moving targets require low-latency synchronization, while the shared physical space necessitates precise calibration to prevent user collisions and ensure shared spatial context.
+The implementation of the 3-user co-located VR training system, specifically the "Shooting Game" scenario developed for this study. Designed as a representative proxy for professional collaborative training tasks, the application places three co-located users in a shared virtual arena where they must coordinate to neutralize waves of aerial drones. This scenario was chosen to impose significant demands on the system's networking and spatial alignment capabilities.
 
 \subsection{Hardware Configuration}
 
-The experimental testbed consists of:
-
-\begin{itemize}
-    \item \textbf{Headsets:} 3$\times$ Meta Quest 3
-    \begin{itemize}
-        \item Tracking: Inside-out optical tracking
-        \item Controllers: Meta Quest Touch Plus (Left/Right)
-    \end{itemize}
-    
-    \item \textbf{Network Infrastructure:}
-    \begin{itemize}
-        \item WiFi Router (Dedicated 5GHz channel)
-    \end{itemize}
-\end{itemize}
+The experimental testbed consists of three Meta Quest 3 standalone headsets, utilizing inside-out optical tracking and Meta Quest Touch Plus controllers. The network infrastructure is supported by a WiFi router with a dedicated 5GHz channel to ensure low-latency local multiplayer performance.
 
 \subsection{Software Architecture}
 
 The system is built on Unity 6000.0.62f1 using the Universal Render Pipeline (URP). The architecture leverages Meta's "Building Blocks" for rapid development of complex MR features.
-
+% PLACEHOLDER FOR ARCHITECTURE DIAGRAM
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=\columnwidth]{figures/architecture_diagram.png}} 
+\caption{System Architecture Diagram illustrating the data flow between Unity components, the Photon Fusion Network, and the physical Hardware layer.}
+\label{fig:architecture}
+\end{figure}
 \subsubsection{Key Components}
-The `ShootingGame` scene integrates the following core components:
+The `ShootingGame` scene integrates several core components (see Fig. \ref{fig:architecture}). The \textbf{Colocation} system handles the spatial alignment of multiple users by utilizing Meta's Shared Spatial Anchors to establish a common coordinate system. The \textbf{Network Manager} oversees the Photon Fusion networking session, handling connection and lobby management. The \textbf{Shooting Game Manager} orchestrates the game logic, while a \textbf{Spawn Manager} handles the dynamic spawning of targets (drones).
 
-\begin{itemize}
-    \item \textbf{Colocation:} Handles the spatial alignment of multiple users. It utilizes Meta's Shared Spatial Anchors to establish a common coordinate system. The `ColocationManager` script manages the anchor creation, sharing, and alignment process.
-    \item \textbf{Network Manager:} Manages the Photon Fusion networking session. It handles connection, lobby management, and spawning of networked objects.
-    \item \textbf{Shooting Game Manager:} Orchestrates the game logic, including round management, scoring, and game state synchronization across all clients.
-    \item \textbf{Spawn Manager:} Handles the dynamic spawning of targets (drones) within the arena, ensuring synchronized positions and states for all players.
-    \item \textbf{Networked Avatar:} Provides visual representation of other users. It synchronizes head and hand movements to facilitate social presence and coordination.
-\end{itemize}
+
 
 \subsection{Scene Implementation: Shooting Game}
 
-The primary experimental scenario is the "Shooting Game" (`ShootingGame.unity`). This scene is designed to test co-location accuracy and network latency in a dynamic, interactive environment.
+The primary experimental scenario is the "Shooting Game" (`ShootingGame.unity`), designed to test co-location accuracy and network latency in a dynamic, interactive environment.
 
 \subsubsection{Arena Setup}
-The virtual environment consists of a central `Arena` structure. This arena serves as the shared physical reference point. Users are physically co-located around this virtual arena, allowing them to see and interact with the same virtual targets from different physical perspectives.
+The virtual environment consists of a central `Arena` structure that serves as the shared physical reference point. Users are physically co-located around this virtual arena, allowing them to see and interact with the same virtual targets from different physical perspectives.
 
 \subsubsection{Gameplay Mechanics}
 Players collaborate to shoot drone targets spawned by the `Spawn Manager`. The `Shooting Game Manager` synchronizes the game state, ensuring that when a player destroys a target, it disappears for all users simultaneously. This requires low-latency networking and precise spatial alignment to ensure the laser shots visually align with the targets across all headsets.
 
+% % PLACEHOLDER FOR SCREENSHOT
+% \begin{figure}[htbp]
+% % Erstat 'game_screenshot.png' med dit filnavn
+% \centerline{\includegraphics[width=\columnwidth]{game_screenshot.png}} 
+% \caption{In-game perspective showing the shared virtual arena. Note the alignment of the virtual elements with the physical floor plane, enabling co-located users to interact naturally.}
+% \label{fig:game_view}
+% \end{figure}
+
 \subsubsection{Game Loop}
-The game follows a simple, repeatable loop designed for continuous data collection:
-\begin{enumerate}
-    \item \textbf{Lobby Phase:} Users join the shared session and align their coordinate systems.
-    \item \textbf{Round Start:} The host initiates a round, spawning a wave of drone targets in random positions around the central arena.
-    \item \textbf{Active Phase:} Players use their controllers to aim and shoot lasers at the drones. Hits are registered on the server (Host) to ensure authority.
-    \item \textbf{Round End:} Once all targets are cleared or a timer expires, the round ends, and scores are tallied. This cycle repeats, allowing for long-duration testing sessions.
-\end{enumerate}
+The game follows a simple, repeatable loop designed for continuous data collection. In the \textbf{Lobby Phase}, users join the shared session and align their coordinate systems. During the \textbf{Round Start}, the host initiates a round, spawning a wave of drone targets. In the \textbf{Active Phase}, players use their controllers to aim and shoot lasers at the drones. Finally, in the \textbf{Round End}, once all targets are cleared, scores are tallied. This cycle repeats, allowing for long-duration testing sessions.
 
 \subsection{Calibration Protocol}
 
-The system employs an automated spatial anchor alignment procedure:
-
-\begin{enumerate}
-    \item \textbf{Host Initialization:} The host device creates a spatial anchor at the center of the physical play area.
-    \item \textbf{Anchor Sharing:} The anchor is shared via the OVR Colocation Discovery API.
-    \item \textbf{Client Alignment:} Guest devices discover the shared anchor and align their Unity coordinate system to match the host's, ensuring the `Arena` and all game objects appear in the exact same physical location for everyone.
-\end{enumerate}
+The system employs an automated spatial anchor alignment procedure. First, the host device creates a spatial anchor at the center of the physical play area. This anchor is then shared via the OVR Colocation Discovery API. Finally, guest devices discover the shared anchor and align their Unity coordinate system to match the host's, ensuring the `Arena` and all game objects appear in the exact same physical location for everyone.
 
 \subsection{Data Collection}
 
-A custom `Network Metrics` component is included in the scene to capture real-time performance data:
-\begin{itemize}
-    \item \textbf{Network Latency (RTT):} Round-trip time to the Photon Fusion server/host.
-    \item \textbf{Frame Rate:} Instantaneous and average FPS.
-    \item \textbf{Calibration Error:} Euclidean distance error between the local anchor position and the shared anchor position.
-\end{itemize}
-
-Metrics are logged to CSV files with session metadata in JSON format, stored in the device's persistent data path for later retrieval and analysis.
+A custom `Network Metrics` component is included in the scene to capture real-time performance data, including Network Latency (RTT) to the Photon Fusion server/host, instantaneous and average Frame Rate (FPS), and Calibration Error measured as the Euclidean distance between the local anchor position and the shared anchor position. Metrics are logged to CSV files with session metadata in JSON format.

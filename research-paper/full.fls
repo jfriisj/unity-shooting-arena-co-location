@@ -1,6 +1,6 @@
-PWD c:\github\shooting\research-paper
+PWD c:\github\unity-shooting-arena-co-location\research-paper
 INPUT C:\Users\jonfriis\AppData\Local\MiKTeX\miktex\data\le\pdftex\pdflatex.fmt
-INPUT c:\github\shooting\research-paper\full.tex
+INPUT c:\github\unity-shooting-arena-co-location\research-paper\full.tex
 OUTPUT full.log
 INPUT C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex\latex\ieeetran\IEEEtran.cls
 INPUT C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex\latex\ieeetran\IEEEtran.cls
