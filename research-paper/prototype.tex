@@ -4,7 +4,7 @@ The implementation of the 3-user co-located VR training system, specifically the
 
 \subsection{Hardware Configuration}
 
-The experimental testbed consists of three Meta Quest 3 standalone headsets, utilizing inside-out optical tracking and Meta Quest Touch Plus controllers. The network infrastructure is supported by a WiFi router with a dedicated 5GHz channel to ensure low-latency local multiplayer performance.
+The experimental testbed consists of three Meta Quest 3 standalone headsets, utilizing inside-out optical tracking and Meta Quest controllers. The network infrastructure is supported by a WiFi router with a dedicated 5GHz channel to ensure a low-latency local session over WiFi.
 
 \subsection{Software Architecture}
 
@@ -12,23 +12,31 @@ The system is built on Unity 6000.0.62f1 using the Universal Render Pipeline (UR
 % PLACEHOLDER FOR ARCHITECTURE DIAGRAM
 \begin{figure}[htbp]
 \centerline{\includegraphics[width=\columnwidth]{figures/architecture_diagram.png}} 
-\caption{System Architecture Diagram illustrating the data flow between Unity components, the Photon Fusion Network, and the physical Hardware layer.}
+\caption{System Architecture Diagram illustrating the data flow between Unity components, the networking layer, and the physical hardware layer.}
 \label{fig:architecture}
 \end{figure}
 \subsubsection{Key Components}
-The `ShootingGame` scene integrates several core components (see Fig. \ref{fig:architecture}). The \textbf{Colocation} system handles the spatial alignment of multiple users by utilizing Meta's Shared Spatial Anchors to establish a common coordinate system. The \textbf{Network Manager} oversees the Photon Fusion networking session, handling connection and lobby management. The \textbf{Shooting Game Manager} orchestrates the game logic, while a \textbf{Spawn Manager} handles the dynamic spawning of targets (drones).
+The \textit{ShootingGame} scene integrates several core components (see Fig. \ref{fig:architecture}). The \textbf{Colocation} system handles the spatial alignment of multiple users by utilizing Meta's Shared Spatial Anchors\cite{MetaSharedSpatialAnchors2025} to establish a common coordinate system. The \textbf{Network Manager} oversees the local session, while the \textbf{Shooting Game Manager} orchestrates the game logic and a \textbf{Spawn Manager} handles the dynamic spawning of targets (drones).
 
 
 
 \subsection{Scene Implementation: Shooting Game}
 
-The primary experimental scenario is the "Shooting Game" (`ShootingGame.unity`), designed to test co-location accuracy and network latency in a dynamic, interactive environment.
+The primary experimental scenario for the experiment is a Shooting Game, designed to test co-location accuracy and network latency in a dynamic, interactive environment.
 
 \subsubsection{Arena Setup}
-The virtual environment consists of a central `Arena` structure that serves as the shared physical reference point. Users are physically co-located around this virtual arena, allowing them to see and interact with the same virtual targets from different physical perspectives.
+
+The virtual environment consists of a central \texttt{Arena} structure that serves as the shared physical reference point. Users are physically co-located around this virtual arena, allowing them to see and interact with the same virtual targets from different physical perspectives.
 
 \subsubsection{Gameplay Mechanics}
-Players collaborate to shoot drone targets spawned by the `Spawn Manager`. The `Shooting Game Manager` synchronizes the game state, ensuring that when a player destroys a target, it disappears for all users simultaneously. This requires low-latency networking and precise spatial alignment to ensure the laser shots visually align with the targets across all headsets.
+Players collaborate to shoot drone targets spawned by the \textit{Spawn Manager}. The \textit{Shooting Game Manager} coordinates the round loop for spawning waves, tracking progression, and restart conditions. This imposes real-time rendering and interaction load while preserving shared spatial alignment across headsets.
+
+
+\subsection{Spatial Colocation}
+\label{sec:prototype-colocation}
+
+The system established a shared coordinate system across three Meta Quest 3 headsets by creating a host-defined spatial anchor and distributing it via the OVR Colocation Discovery API\cite{MetaColocationDiscovery2025}. In our implementation, the host advertises a local session (yielding a group UUID) and places the anchor at the host headset's current position projected to the ground plane. Guest headsets perform nearby session discovery, load the shared anchor group, and localize the received unbound anchor before binding it to a scene object. Once localized, each guest aligns its tracking space/camera rig to the anchor transform, resulting in a consistent placement of the arena and interactive content across devices.
+For operational robustness, the implementation includes explicit discovery timing/timeout handling and logs the discovery and localization durations for debugging and repeatability.
 
 % % PLACEHOLDER FOR SCREENSHOT
 % \begin{figure}[htbp]
@@ -43,8 +51,17 @@ The game follows a simple, repeatable loop designed for continuous data collecti
 
 \subsection{Calibration Protocol}
 
-The system employs an automated spatial anchor alignment procedure. First, the host device creates a spatial anchor at the center of the physical play area. This anchor is then shared via the OVR Colocation Discovery API. Finally, guest devices discover the shared anchor and align their Unity coordinate system to match the host's, ensuring the `Arena` and all game objects appear in the exact same physical location for everyone.
+The system employs an automated spatial anchor alignment procedure. First, the host device creates a spatial anchor at the center of the physical play area. This anchor is then shared via the OVR Colocation Discovery API\cite{MetaColocationDiscovery2025} and loaded as a Shared Spatial Anchor\cite{MetaSharedSpatialAnchors2025}. Finally, guest devices discover the shared anchor and align their Unity coordinate system to match the host's, ensuring the \texttt{Arena} and all game objects appear in the exact same physical location for everyone.
 
 \subsection{Data Collection}
+\label{sec:prototype-logging}
+A custom \texttt{MetricsLogger} component is included in the scene to capture real-time performance data, including network latency (RTT) to the local session host, instantaneous and average frame rate (FPS), and calibration error measured as the Euclidean distance between the local anchor position and the shared anchor position.
+This logging pipeline allows sampling at 1Hz to support long-duration evaluation without external instrumentation. Each headset writes a per-session CSV file containing: session identifier, headset identifier, participant count, timestamp, frame rate, network latency (RTT), calibration error, battery temperature, battery level, and runtime state (e.g., host/client/not connected). In addition, a JSON metadata file is generated per session to capture device and runtime context (device model/name, Unity/app version, start/end time, duration, and total samples). To reduce data loss during long runs, logs are periodically flushed to disk and also persisted on application pause/quit; an optional on-headset debug overlay provides live visibility of the same key metrics during testing.
 
-A custom `Network Metrics` component is included in the scene to capture real-time performance data, including Network Latency (RTT) to the Photon Fusion server/host, instantaneous and average Frame Rate (FPS), and Calibration Error measured as the Euclidean distance between the local anchor position and the shared anchor position. Metrics are logged to CSV files with session metadata in JSON format.
+
+\subsection{Meta Quest Device Setup and APK Deployment}
+\label{sec:prototype-deployment}
+To enable reproducible development and on-device testing, each Meta Quest 3 headset was configured for Android developer deployment. The setup requires enabling Developer Mode on the headset and installing the application APK through Meta Quest Developer Hub\cite{MetaMQDHGettingStarted2025}.
+All headsets must be enrolled under a Meta developer account/organization, paired through the Meta Horizon mobile app, and configured in Developer Mode to enable USB deployment. During setup, each headset prompted for USB debugging authorization, which was accepted to allow repeat installations from the development PC. APK deployment was performed through Meta Quest Developer Hub (MQDH) by verifying the headset appeared as an authorized device, installing the build from MQDH's device manager, and launching the application from the headset library. This standardized workflow reduced per-device configuration variance and enabled reproducible build deploy cycles across the three-headset testbed.
+
+This workflow supports repeated build deploy cycles for performance measurement sessions, while keeping the runtime environment consistent across the three headsets.

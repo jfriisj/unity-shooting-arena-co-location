@@ -2,22 +2,22 @@
 % Describe the outcome of your experiment. Discuss the success and failure of your experiments.
 \section{Results}
 
-This section presents the experimental validation of the 3-user co-located VR system across extended training sessions (up to 97 minutes). Results are organized by research question.
+This section presents the experimental validation of the 3-user co-located VR system during an extended co-located run. The longest continuous logging window with all three headsets active lasted 85.1 minutes (5073 samples per headset at 1Hz; 15,234 total samples across devices). The host headset additionally logged 97.0 minutes including pre-session setup and post-session tail time. Results are organized by research question.
 
 \subsection{RQ1: Technical Benchmark Achievement}
 
 \subsubsection{Network Latency Performance}
 
-Network latency measurements demonstrate achievement of Van Damme et al.'s~\cite{VanDammeSam2024Iolo} target threshold for good collaborative quality of experience (QoE $\leq$ 75ms RTT). Across all sessions, mean latency was $58.0 \pm 21.0$ms. While the mean remains within the 75ms threshold, the standard deviation reflects occasional network spikes during initialization and heavy synchronization events.
+Network latency measurements show that the system's \emph{mean} RTT remained below Van Damme et al.'s~\cite{VanDammeSam2024Iolo} target threshold for good collaborative quality of experience (QoE $\leq$ 75ms RTT). Over the 85.1-minute 3-headset run, mean RTT was $58.2 \pm 21.3$ms with a 95th percentile of 86.0ms. While the mean remains within the 75ms target, the tail latency exceeds it at P95 and includes occasional spikes (max 791.4ms) during initialization and synchronization events.
 
 \begin{table}[h]
 \centering
 \caption{Network Latency Performance}
-\begin{tabular}{|l|c|c|c|c|}
+\begin{tabular}{|l|c|c|c|}
 \hline
-\textbf{Metric} & \textbf{Mean (ms)} & \textbf{SD} & \textbf{Min} & \textbf{Max} \\
+			\textbf{Metric} & \textbf{Mean (ms)} & \textbf{SD} & \textbf{P95 (ms)} \\
 \hline
-Overall & 58.0 & 21.0 & 0.0 & 791.4 \\
+Overall & 58.2 & 21.3 & 86.0 \\
 \hline
 \end{tabular}
 \end{table}
@@ -26,7 +26,7 @@ Despite occasional outliers, the system consistently maintained performance belo
 
 \subsubsection{Frame Rate Stability}
 
-Frame rate performance was evaluated against the Meta Quest 3's native 72Hz refresh rate target. The system achieved a mean frame rate of $72.2 \pm 0.7$fps. Frame rates stabilized at $72.2$--$72.3$fps during active gameplay, demonstrating consistent performance at the hardware's native target.
+Frame rate performance was evaluated against the Meta Quest 3's native 72Hz refresh rate target. The system achieved a mean frame rate of $72.2 \pm 0.7$fps, remaining tightly clustered around the 72Hz target throughout the run.
 
 \begin{table}[h]
 \centering
@@ -36,35 +36,34 @@ Frame rate performance was evaluated against the Meta Quest 3's native 72Hz refr
 \textbf{State} & \textbf{Frame Rate (fps)} & \textbf{Notes} \\
 \hline
 Overall Mean & $72.2 \pm 0.7$ & Stable Performance \\
-Active Gameplay & $72.2 - 72.3$ & Stable at target \\
-Min & $53.0$ & Occasional drops \\
+5th--95th Percentile & $70.9 - 73.1$ & Includes initialization variance \\
 \hline
 \end{tabular}
 \end{table}
 
 \subsubsection{Calibration Accuracy and Drift}
 
-Automated spatial anchor calibration achieved exceptional accuracy, with a mean error of $0.39 \pm 0.76$mm across all headsets. This significantly exceeds Reimer et al.'s~\cite{ReimerDennis2021CfSV} $<10$mm safety-critical threshold, validating the spatial anchor approach for precise co-location.
+Automated spatial anchor calibration achieved high accuracy under stationary baseline conditions. During the 85.1-minute 3-headset run, the client headset that logged non-zero calibration error reported a mean error of $1.21 \pm 0.90$mm with a maximum of 5.78mm. This remains within Reimer et al.'s~\cite{ReimerDennis2021CfSV} $<10$mm safety-critical reference threshold, supporting the feasibility of anchor-based co-location.
 
 \begin{table}[h]
 \centering
-\caption{Calibration Accuracy}
+\caption{Calibration Accuracy (Headset with Non-Zero Logging)}
 \begin{tabular}{|l|c|c|c|}
 \hline
 \textbf{Metric} & \textbf{Mean (mm)} & \textbf{SD} & \textbf{Max} \\
 \hline
-Error & 0.39 & 0.76 & 5.78 \\
+Error & 1.21 & 0.90 & 5.78 \\
 \hline
 \end{tabular}
 \end{table}
 
-Calibration drift was minimal even over 97-minute sessions, with maximum error remaining well below the 10mm safety threshold.
+Calibration drift was minimal over the full 85.1-minute 3-headset run, with maximum error remaining well below the 10mm reference threshold.
 
 \subsection{RQ2 \& RQ3: Collaboration Effectiveness}
 
 \subsubsection{Task Performance}
 
-While specific WIM interface metrics were not collected in this technical validation phase, the system successfully supported 3-user co-located interaction for durations exceeding 90 minutes without technical failure. The stability of the shared coordinate system ($<1$mm error) provided a solid foundation for collaborative tasks.
+While specific WIM interface metrics were not collected in this technical validation phase, the system successfully supported 3-user co-located interaction for an 85.1-minute run without technical failure. Under stationary baseline conditions, the shared coordinate system remained within single-digit millimeter error on the headset reporting non-zero calibration error.
 
 \subsection{RQ4: Long-Term Performance Stability}
 
@@ -74,7 +73,7 @@ Device temperature monitoring revealed consistent thermal buildup patterns. Head
 
 Temperature correlated weakly with performance metrics:
 \begin{itemize}
-    \item Frame rate vs Temp: $r=0.15$ (Weak positive correlation)
+    \item Frame rate vs Temp: $r=0.14$ (Weak positive correlation)
 \end{itemize}
 
-Despite significant thermal buildup, the system maintained stable performance (72fps, $<1$mm error) throughout the extended sessions, demonstrating the Quest 3's effective thermal management for long-duration training.
+Despite significant thermal buildup, the system maintained stable performance throughout the extended run, demonstrating the Quest 3's effective thermal management for long-duration training.

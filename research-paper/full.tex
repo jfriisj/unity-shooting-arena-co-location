@@ -40,7 +40,7 @@
 % Summarize your work in 100-150 words.
 % \end{abstract}
 \begin{abstract}
-Co-located multi-user virtual reality (VR) training enables participants to share physical space while collaborating in virtual environments, yet its technical feasibility using consumer hardware remains under-validated. This study evaluates a 3-user co-located system using Meta Quest 3 wireless headsets against evidence-based requirements for professional training. We assessed key performance indicators including network latency, spatial calibration precision, and long-term stability under thermal load. The system demonstrated the capability to maintain safety-critical standards throughout extended sessions, achieving precise user alignment and stable frame rates. Our findings validate that current-generation consumer wireless VR hardware can effectively support professional co-located training scenarios at a fraction of the cost of traditional enterprise solutions, significantly lowering the barrier to entry for collaborative immersive simulation.
+Co-located multi-user virtual reality (VR) training enables participants to share physical space while collaborating in virtual environments, yet its technical feasibility using consumer hardware remains under-validated. This study evaluates a 3-user co-located system using Meta Quest 3 wireless headsets against evidence-based technical benchmarks relevant to professional training. We measured network latency, spatial calibration precision and stationary drift relative to a shared anchor, frame rate stability against the 72Hz target, and device thermals via battery temperature during extended runs. The system met the selected benchmarks in these proxy measures throughout the test sessions, supporting the feasibility of consumer wireless VR for co-located training scenarios at substantially lower cost than enterprise solutions.
 \end{abstract}
 
 % Nøgleord
@@ -53,143 +53,211 @@ Virtual Reality, Co-located VR, Multi-user Systems, Collaborative Training, Meta
 
 
 % Indhold
+% Indhold
 \section{Introduction}
 
 Virtual Reality (VR) training systems have demonstrated significant potential for professional education, particularly in safety-critical domains such as emergency medical services \cite{SchildJonas2018E—Ev}, maintenance operations \cite{HeinonenHanna2022EtBo}, and crisis response \cite{SharmaSharad2025IASR}.
-However, most existing multi-user VR solutions address scenarios where users connect from geographically distributed locations \cite{VanDammeSam2024Iolo}, leaving a critical gap in systems designed for colocated training where multiple users share the same physical space. This distinction is not merely technical—co-located training enables real-world teamwork dynamics, immediate physical assistance between trainees, and authentic spatial coordination that remote systems cannot replicate. Standalone wireless VR headsets, particularly the Meta Quest 3, present unprecedented opportunities for co-located multi-user training, eliminating cable-related usability issues that caused 66.7\% of users to rate tethered systems poorly \cite{SchildJonas2018E—Ev}. However, co-located systems introduce unique challenges achieving calibration accuracy to prevent user collisions \cite{ReimerDennis2021CfSV}, maintaining low network latency \cite{VanDammeSam2024Iolo}, providing spatial awareness interfaces \cite{ChenLei2024Eoep}, and ensuring visual consistency across headsets \cite{WeissYannick2025ItEo}. While enterprise VR rooms (e.g., Virtualware’s VIROO) demonstrate commercial viability, their high costs (\$50,000+) limit accessibility. This work addresses the need for an affordable, portable co-located VR system using Meta Quest 3 headsets ($\approx$\$300 each), delivering enterprise training capabilities at 15-20\% of traditional costs while solving co-location challenges: collision prevention \cite{ReimerDennis2021CfSV}, spatial awareness \cite{ChenLei2024Eoep}, and millimeter-accurate avatar alignment.
-
+However, most existing multi-user VR solutions address scenarios where users connect from geographically distributed locations \cite{VanDammeSam2024Iolo}, leaving a critical gap in systems designed for colocated training where multiple users share the same physical space. This distinction is not merely technical—co-located training enables real-world teamwork dynamics, immediate physical assistance between trainees, and authentic spatial coordination that remote systems cannot replicate. Standalone wireless VR headsets, particularly the Meta Quest 3, present opportunities for co-located multi-user training, eliminating cable-related usability issues that caused 66.7\% of users to rate tethered systems poorly \cite{SchildJonas2018E—Ev}. However, co-located systems introduce unique challenges achieving calibration accuracy to prevent user collisions \cite{ReimerDennis2021CfSV}, maintaining low network latency \cite{VanDammeSam2024Iolo}, providing spatial awareness interfaces \cite{ChenLei2024Eoep}, and ensuring visual consistency across headsets \cite{WeissYannick2025ItEo}. While enterprise VR rooms (e.g., Virtualware’s VIROO) demonstrate commercial viability, their high costs (\$50,000+) limit accessibility. This work addresses the need for an affordable, portable co-located VR system using Meta Quest 3 headsets ($\approx$\$300 each), targeting co-location requirements including collision prevention \cite{ReimerDennis2021CfSV}, spatial awareness \cite{ChenLei2024Eoep}, and high-precision avatar alignment.
 
 \subsection{Motivation and Significance}
 
-Professional training in safety-critical domains demands realistic, repeatable, and scalable practice. Traditional highfidelity training rigs are costly and logistically heavy, limiting frequent practice and team-based drills \cite{SharmaSharad2025IASR}. Consumer wireless headsets (e.g., Meta Quest 3) promise orders-of-magnitude cost reduction, but require validation against evidencebased technical benchmarks: precise calibration (\textless10mm) for collision avoidance \cite{ReimerDennis2021CfSV}, low end-to-end latency to preserve shared action timing \cite{VanDammeSam2024Iolo}, and spatial awareness interfaces to support multi-user coordination \cite{ChenLei2024Eoep}. Visual consistency across participants is also critical—mismatches degrade collaborative performance \cite{WeissYannick2025ItEo}. This work addresses the technical foundation for such validation by implementing a 3-user co-located prototype that demonstrates automated spatial anchor colocation, performance monitoring infrastructure, and networked synchronization capabilities. The system provides an open-source reference implementation and establishes metrics collection framework for future empirical studies to measure learning, safety, and usability outcomes with actual participants.
+Professional training in safety-critical domains demands realistic, repeatable, and scalable practice. Traditional highfidelity training rigs are costly and logistically heavy, limiting frequent practice and team-based drills \cite{SharmaSharad2025IASR}. Consumer wireless headsets (e.g., Meta Quest 3) promise large cost reduction, but require validation against evidencebased technical benchmarks: precise calibration (\textless10mm) for collision avoidance \cite{ReimerDennis2021CfSV}, low end-to-end latency to preserve shared action timing \cite{VanDammeSam2024Iolo}, and spatial awareness interfaces to support multi-user coordination \cite{ChenLei2024Eoep}. Visual consistency across participants is also critical—mismatches degrade collaborative performance \cite{WeissYannick2025ItEo}. This work addresses the technical foundation for such validation by implementing a 3-user co-located prototype that demonstrates automated spatial anchor colocation, performance monitoring infrastructure, and repeatable multi-device coordination over local WiFi. The system provides a reference implementation and establishes a metrics collection framework for future empirical studies to measure learning, safety, and usability outcomes with actual participants.
 
 \subsection{Research Questions}
 This prototype implementation addresses key technical challenges identified in co-located multi-user VR literature. The system design targets integration of validated requirements from systematic review to create a foundation for future empirical research.
 
 Research Questions:
 \begin{itemize}
-    \item \textbf{RQ1}: How can automated spatial colocation be implemented for 3-user configurations using Meta's OVR Colocation Discovery API with spatial anchor-based alignment?
-    \item \textbf{RQ2}: What performance monitoring infrastructure is required to enable continuous metrics collection (network latency, frame rate, calibration accuracy, device thermals) for future validation studies?
-    \item \textbf{RQ3}: How effectively can networked object synchronization and state management be achieved across co-located headsets using Photon Fusion networking framework?
-    \item \textbf{RQ4}: What architectural patterns enable reproducible implementation addressing literature-identified challenges: collision prevention through calibration, low-latency local networking, and symmetric rendering?
-    \item \textbf{RQ5}: What are the technical feasibility boundaries and limitations of consumer wireless VR hardware (Quest 3) for professional training applications requiring safety-critical performance?
+    \item \textbf{RQ1}: How can automated spatial colocation be implemented for a 3-user configuration using Meta's OVR Colocation Discovery API with shared spatial anchor-based alignment?~\cite{MetaColocationDiscovery2025,MetaSharedSpatialAnchors2025}
+    \item \textbf{RQ2}: How accurately and stably can the shared coordinate system be maintained during extended sessions, as measured by calibration error and drift relative to the shared anchor?
+    \item \textbf{RQ3}: What on-device monitoring infrastructure is required to continuously log key technical metrics (network latency, frame rate, calibration error, and thermals) during long-duration tests?
+    \item \textbf{RQ4}: What device setup and deployment workflow enables reproducible multi-headset development and experimentation?
+    \item \textbf{RQ5}: What are the practical feasibility boundaries of a consumer, wireless 3-user co-located Quest 3 system under a dynamic training proxy, in terms of performance, stability, and operational limitations?
 \end{itemize}
-
-
 
 
 \section{State of the art}
 % Describe what others have done to solve the same industrial challenge. Provide references.
 
-Van Damme et al.~\cite{VanDammeSam2024Iolo} demonstrated that latency critically affects collaborative VR quality of experience (QoE): $\leq 75$ms RTT provides good collaboration, while $>300$ms causes severe degradation ($p<0.001$). Co-located systems using local WiFi networking can achieve low latency, but Quest 3 validation with Photon Fusion is needed.
+\subsection{Collaborative VR for training and industrial work}
+Multi-user VR has been studied as a training and collaboration medium in safety-critical contexts. In paramedic training, Schild et al.~\cite{SchildJonas2018E—Ev} found usability issues to be a limiting factor (66.7\% rated tethered systems poorly; SUS $<70$) and reported strong relationships between usability and presence (e.g., experienced realism $r=0.73$, $p<0.001$). In industrial maintenance, Heinonen et al.~\cite{HeinonenHanna2022EtBo} investigated collaborative VR for documentation review and risk assessment with domain experts (n=9) and reported positive ratings and improved spatial understanding, highlighting that practical value depends on task fidelity and usable review tooling.
 
-Reimer et al.~\cite{ReimerDennis2021CfSV} compared calibration methods for Meta Quest devices, finding hand tracking achieved best accuracy ($\sim$10mm error) without additional hardware. This establishes the safety-critical threshold for collision prevention. However, only 2 Quest 1 devices were tested; Quest 3 validation with three headsets over 30--60 minute sessions remains unaddressed.
+\subsection{Network latency and multi-user QoE}
+Network responsiveness is a key determinant of collaboration quality in interactive multi-user VR. Van Damme et al.~\cite{VanDammeSam2024Iolo} showed that latency strongly influences collaborative quality of experience (QoE): $\leq 75$ms round-trip time (RTT) supports good collaboration, while $>300$ms causes severe degradation. Importantly, they note that multi-user experiences are not only affected by uniform delay but also by bursty network behavior (e.g., saturation-induced stalls), and that subjective perception is shaped by user role, task type, and movement rather than objective performance alone.
 
-Chen et al.~\cite{ChenLei2024Eoep} evaluated World-in-Miniature (WIM) interfaces (n=36), demonstrating significant improvements over 2D maps ($p<0.05$) for collaborative tasks. WIM effectiveness increases with task complexity, but 3-user co-located configurations are unexplored.
+\subsection{Co-location calibration for SLAM-tracked headsets}
+For co-located VR, correct alignment between physical and virtual relative user positions is safety-critical. Reimer et al.~\cite{ReimerDennis2021CfSV} evaluated calibration methods for SLAM-tracked headsets without external tracking, including fixed-point, marker-based, and a hand tracking-based method. They reported that hand tracking-based calibration provided the best accuracy and consistency (on the order of $\sim$10mm) and reduced infrastructure requirements. However, their evaluation was limited to two Oculus Quest devices and emphasized one-time calibration, leaving multi-device validation on newer headsets and long-duration stability under realistic motion as open questions.
 
-Weiss et al.~\cite{WeissYannick2025ItEo} showed visual consistency across headsets is essential—asymmetric representations significantly degrade collaborative performance (n=30). Co-located systems require symmetric views and $<10$mm calibration to maintain consistency.
+\subsection{Spatial awareness and cross-user consistency}
+Beyond geometric alignment and latency, collaborative effectiveness depends on users maintaining awareness of teammates and sharing consistent representations. Chen et al.~\cite{ChenLei2024Eoep} studied exocentric perspective interfaces for collaborative VR (n=36), showing that interactive World-in-Miniature (WIM) and 2D map interfaces can improve task performance, usability, and social presence while reducing VR sickness; WIM was particularly beneficial in higher task complexity. Separately, Weiss et al.~\cite{WeissYannick2025ItEo} demonstrated that visuo-haptic mismatches and, crucially, mismatched visualizations between collaborators can degrade both performance and experience in co-located collaborative tasks, implying that symmetric, consistent representations across headsets matter for robust collaboration.
 
-Schild et al.~\cite{SchildJonas2018E—Ev} evaluated paramedic VR training (n=24), revealing 66.7\% rated tethered systems with poor usability (SUS $<70$) due to cables. Strong correlations emerged between usability and presence ($r=0.73$, $p<0.001$ for experienced realism). Wireless headsets should dramatically improve these metrics.
+\subsection{Summary of Research Gap}
+While existing literature establishes key baselines for collaborative feasibility (e.g., RTT limits for collaboration~\cite{VanDammeSam2024Iolo} and $\sim$10mm calibration targets for collision risk reduction~\cite{ReimerDennis2021CfSV}), evidence is fragmented across different hardware generations, user counts, and experimental contexts. Prior work often studies networking (typically two-user collaboration with controlled latency) separately from co-location calibration (often two devices and one-time procedures) and from interface support for awareness (often task-focused lab studies). Consequently, there remains limited validation of whether a consumer, standalone 3-user system can simultaneously (i) establish shared spatial alignment, (ii) maintain it over extended durations, and (iii) meet collaboration-relevant performance targets while using consistent representations across devices. This work addresses that intersection by integrating co-location, networking, and continuous on-device measurement into a unified 3-user Quest 3 testbed.
 
 
 \section{Approach}
 
-This study investigates a co-located multi-user VR configuration using wireless headsets to address the gap between distributed VR collaboration systems and the requirements of shared physical training environments.
+This study investigates a co-located multi-user VR configuration using wireless headsets to address the gap between distributed VR collaboration systems and the requirements of shared physical training environments. The approach is intentionally scoped as a \emph{technical feasibility validation} of a consumer 3-user setup, rather than a learning-outcome study.
 
-\subsection{System Design}
+\subsection{How the Approach Differs}
+Prior co-located systems commonly rely on external tracking infrastructure (e.g., multi-camera setups) or manual calibration workflows, while multi-user networking studies frequently focus on two-user collaboration with controlled, artificial network impairments. Relative to these solution families, our approach integrates (i) \emph{anchor-based automated co-location} using inside-out tracked consumer headsets, (ii) \emph{local rendering with lightweight synchronization} over WiFi rather than server-rendered streaming architectures with stringent throughput/latency requirements, and (iii) \emph{continuous on-device instrumentation} so performance and stability can be evaluated during long-duration sessions.
 
-The experimental system consists of three Meta Quest 3 standalone headsets operating within a shared physical space, networked via WiFi infrastructure.
+The approach is designed to be \emph{better for validating feasibility in practice} because it uses the same constraints a training deployment would face (standalone headsets, consumer WiFi, minimal setup time), while still tying acceptance criteria to evidence-based thresholds from the literature: safe alignment accuracy for collision risk reduction~\cite{ReimerDennis2021CfSV} and collaboration-relevant RTT targets~\cite{VanDammeSam2024Iolo}. Finally, by standardizing multi-headset setup and APK deployment through Meta Quest Developer Hub (MQDH)\cite{MetaMQDHGettingStarted2025}, the workflow reduces per-device variance and supports repeatable iteration across all three headsets.
 
-\subsubsection{Hardware Configuration}
-The hardware setup comprises three Meta Quest 3 standalone headsets, which utilize inside-out optical tracking with hand tracking capabilities. Networking is handled by a WiFi router configured with a dedicated 5GHz channel to ensure low-latency local multiplayer performance.
+While our prototype does not implement a dedicated spatial awareness UI (e.g., WIM), it emphasizes representation consistency: the same anchored scene content is rendered on each headset, motivated by findings that mismatched representations can degrade collaborative performance~\cite{WeissYannick2025ItEo}.
 
-\subsubsection{Software Architecture}
-The system is built on Unity 6000.0.62f1 and integrates the Meta XR SDK v81.0.0 for core VR and passthrough functionality. State synchronization is managed by the Photon Fusion 1.1.0 networking framework, while the Universal Render Pipeline (URP) is employed for performance-optimized rendering. Additionally, a custom \texttt{MetricsLogger} component is included for 1Hz performance monitoring, tracking FPS, RTT, calibration error, and thermals.
+\subsection{Design Targets (Benchmarks)}
+The feasibility validation uses literature-derived targets as benchmark criteria:
+\begin{itemize}
+    \item \textbf{Collaboration latency}: maintain $\leq 75$ms RTT as a target threshold for good collaborative QoE~\cite{VanDammeSam2024Iolo}.
+    \item \textbf{Co-location accuracy}: maintain calibration error below $10$mm as a conservative safety-relevant reference point for collision prevention~\cite{ReimerDennis2021CfSV}.
+    \item \textbf{Visual performance}: maintain stable rendering at the device target refresh rate (72Hz) to support comfort and consistent interaction.
+    \item \textbf{Operational stability}: maintain the above targets over extended continuous sessions (tens of minutes to $\sim$1.5 hours) without external instrumentation.
+\end{itemize}
 
-\subsubsection{Calibration Protocol}
-To achieve precise co-location, the system employs an automated spatial anchor alignment procedure. The host device creates and shares a spatial anchor via the OVR Colocation Discovery API. Guest devices then discover and localize this shared anchor. Subsequently, the \texttt{ColocationManager} aligns each user's camera rig to the anchor's transform. Throughout the session, alignment error is continuously calculated as the Euclidean distance from the anchor position.
+\subsection{System Overview}
+The experimental system consists of three Meta Quest 3 standalone headsets operating within a shared physical space and networked via WiFi. Co-location is established using Meta's OVR Colocation Discovery API\cite{MetaColocationDiscovery2025} with a shared spatial anchor\cite{MetaSharedSpatialAnchors2025}, while multi-user state synchronization is implemented using Photon Fusion 2\cite{PhotonFusionDocs,MetaMultiplayerBuildingBlocks2025}. Implementation details and the concrete Unity components are described in Section~\ref{sec:prototype-colocation} and in the \textit{Experimental Prototype} section.
 
-\begin{figure}[htbp]
-\centerline{\includegraphics[width=\columnwidth]{shared_space.png}}
-\caption{Illustration of the shared physical space and spatial anchor synchronization process. The host creates an anchor which is shared via the OVR Colocation Discovery API, allowing guest headsets to align their coordinate systems.}
-\label{fig:shared_space}
-\end{figure}
 
 \subsection{Research Methodology}
-
-The prototype follows a technical demonstration approach to validate performance against evidence-based requirements. Key targets include a network latency of $\leq 75$ms RTT for effective collaboration (Van Damme et al.~\cite{VanDammeSam2024Iolo}) and a calibration accuracy of $<10$mm error for collision prevention (Reimer et al.~\cite{ReimerDennis2021CfSV}). Additionally, the system aims for a stable 72Hz frame rate to ensure user comfort and validates stability over 30--60 minute training sessions.
+The prototype follows a technical demonstration approach to validate whether the integrated system meets the benchmarks in a realistic runtime proxy. Each headset logs key metrics at 1Hz (Section~\ref{sec:prototype-logging}), enabling longitudinal analysis of latency, frame rate, calibration error, and thermals without external measurement tools. Long-duration sessions (60+ minutes) are used to surface stability issues that short lab trials may miss (e.g., drift accumulation, network spikes, or thermal throttling).
 
 \subsection{Assumptions and Limitations}
+Several assumptions and limitations guide this study. Hardware constraints inherent to mobile processing necessitate trade-offs in visual fidelity to maintain target frame rates. Reliable WiFi connectivity is assumed, with measured RTT reflecting the quality of the local network and its contention. Finally, while co-location is established via shared anchors, the strongest safety claims require motion-robust evaluation; therefore, drift measurements under stationary conditions should be interpreted as a best-case baseline (with motion-robustness treated as future work).
 
-Several assumptions and limitations guide this study. Hardware constraints inherent to mobile processing necessitate trade-offs in visual fidelity to maintain target frame rates. Reliable WiFi connectivity is assumed, with performance dependent on local infrastructure. Finally, the scope is limited to a technical demonstration prototype intended to establish baseline metrics for future user studies.
-
-
+With the methodological framework and design constraints established, the following section details the specific implementation of the experimental testbed used to validate these parameters.
 
 \section{Experimental Prototype}
 
-This section describes the implementation of the 3-user co-located VR training system, specifically the "Shooting Game" scenario developed for this study. Designed as a representative proxy for professional collaborative training tasks, the application places three co-located users in a shared virtual arena where they must coordinate to neutralize waves of aerial drones. This scenario was chosen to impose significant demands on the system's networking and spatial alignment capabilities: the fast-moving targets require low-latency synchronization, while the shared physical space necessitates precise calibration to prevent user collisions and ensure shared spatial context.
+The implementation of the 3-user co-located VR training system, specifically the "Shooting Game" scenario developed for this study. Designed as a representative proxy for professional collaborative training tasks, the application places three co-located users in a shared virtual arena where they must coordinate to neutralize waves of aerial drones. This scenario was chosen to impose significant demands on the system's networking and spatial alignment capabilities.
 
 \subsection{Hardware Configuration}
 
-The experimental testbed consists of three Meta Quest 3 standalone headsets, utilizing inside-out optical tracking and Meta Quest Touch Plus controllers. The network infrastructure is supported by a WiFi router with a dedicated 5GHz channel to ensure low-latency local multiplayer performance.
+The experimental testbed consists of three Meta Quest 3 standalone headsets, utilizing inside-out optical tracking and Meta Quest controllers. The network infrastructure is supported by a WiFi router with a dedicated 5GHz channel to ensure a low-latency local session over WiFi.
 
 \subsection{Software Architecture}
 
 The system is built on Unity 6000.0.62f1 using the Universal Render Pipeline (URP). The architecture leverages Meta's "Building Blocks" for rapid development of complex MR features.
-
+% PLACEHOLDER FOR ARCHITECTURE DIAGRAM
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=\columnwidth]{figures/architecture_diagram.png}} 
+\caption{System Architecture Diagram illustrating the data flow between Unity components, the networking layer, and the physical hardware layer.}
+\label{fig:architecture}
+\end{figure}
 \subsubsection{Key Components}
-The `ShootingGame` scene integrates several core components. The \textbf{Colocation} system handles the spatial alignment of multiple users by utilizing Meta's Shared Spatial Anchors to establish a common coordinate system, with the `ColocationManager` script managing the anchor creation, sharing, and alignment process. The \textbf{Network Manager} oversees the Photon Fusion networking session, handling connection, lobby management, and the spawning of networked objects. The \textbf{Shooting Game Manager} orchestrates the game logic, including round management, scoring, and game state synchronization across all clients. A \textbf{Spawn Manager} handles the dynamic spawning of targets (drones) within the arena, ensuring synchronized positions and states for all players. Finally, the \textbf{Networked Avatar} provides a visual representation of other users, synchronizing head and hand movements to facilitate social presence and coordination.
+The \textit{ShootingGame} scene integrates several core components (see Fig. \ref{fig:architecture}). The \textbf{Colocation} system handles the spatial alignment of multiple users by utilizing Meta's Shared Spatial Anchors\cite{MetaSharedSpatialAnchors2025} to establish a common coordinate system. The \textbf{Network Manager} oversees the local session, while the \textbf{Shooting Game Manager} orchestrates the game logic and a \textbf{Spawn Manager} handles the dynamic spawning of targets (drones).
+
+Networking and shared object synchronization are implemented using Photon Fusion 2\cite{PhotonFusionDocs,MetaMultiplayerBuildingBlocks2025}, enabling replicated avatars and gameplay objects through \texttt{NetworkBehaviour} components and RPC messaging.
+
+
 
 \subsection{Scene Implementation: Shooting Game}
 
-The primary experimental scenario is the "Shooting Game" (`ShootingGame.unity`), designed to test co-location accuracy and network latency in a dynamic, interactive environment.
+The primary experimental scenario for the experiment is a Shooting Game, designed to test co-location accuracy and network latency in a dynamic, interactive environment.
 
 \subsubsection{Arena Setup}
-The virtual environment consists of a central `Arena` structure that serves as the shared physical reference point. Users are physically co-located around this virtual arena, allowing them to see and interact with the same virtual targets from different physical perspectives.
+
+The virtual environment consists of a central \texttt{Arena} structure that serves as the shared physical reference point. Users are physically co-located around this virtual arena, allowing them to see and interact with the same virtual targets from different physical perspectives.
 
 \subsubsection{Gameplay Mechanics}
-Players collaborate to shoot drone targets spawned by the `Spawn Manager`. The `Shooting Game Manager` synchronizes the game state, ensuring that when a player destroys a target, it disappears for all users simultaneously. This requires low-latency networking and precise spatial alignment to ensure the laser shots visually align with the targets across all headsets.
+Players collaborate to shoot drone targets spawned by the \textit{Spawn Manager}. The \textit{Shooting Game Manager} coordinates the round loop for spawning waves, tracking progression, and restart conditions. This imposes real-time rendering and interaction load while preserving shared spatial alignment across headsets.
+
+
+\subsection{Spatial Colocation}
+\label{sec:prototype-colocation}
+
+The system established a shared coordinate system across three Meta Quest 3 headsets by creating a host-defined spatial anchor and distributing it via the OVR Colocation Discovery API\cite{MetaColocationDiscovery2025}. In our implementation, the host advertises a local session (yielding a group UUID) and places the anchor at the host headset's current position projected to the ground plane. Guest headsets perform nearby session discovery, load the shared anchor group, and localize the received unbound anchor before binding it to a scene object. Once localized, each guest aligns its tracking space/camera rig to the anchor transform, resulting in a consistent placement of the arena and interactive content across devices.
+For operational robustness, the implementation includes explicit discovery timing/timeout handling and logs the discovery and localization durations for debugging and repeatability.
+
+\begin{figure}[htbp]
+\centerline{\includegraphics[width=\columnwidth]{figures/shared_space_model.png}}
+\caption{Illustration of the shared physical space and spatial anchor synchronization process. The host creates an anchor which is shared via the OVR Colocation Discovery API, allowing guest headsets to align their coordinate systems.}
+\label{fig:shared_space}
+\end{figure}
+
+% % PLACEHOLDER FOR SCREENSHOT
+% \begin{figure}[htbp]
+% % Erstat 'game_screenshot.png' med dit filnavn
+% \centerline{\includegraphics[width=\columnwidth]{game_screenshot.png}} 
+% \caption{In-game perspective showing the shared virtual arena. Note the alignment of the virtual elements with the physical floor plane, enabling co-located users to interact naturally.}
+% \label{fig:game_view}
+% \end{figure}
 
 \subsubsection{Game Loop}
-The game follows a simple, repeatable loop designed for continuous data collection. In the \textbf{Lobby Phase}, users join the shared session and align their coordinate systems. During the \textbf{Round Start}, the host initiates a round, spawning a wave of drone targets in random positions around the central arena. In the \textbf{Active Phase}, players use their controllers to aim and shoot lasers at the drones, with hits registered on the server (Host) to ensure authority. Finally, in the \textbf{Round End}, once all targets are cleared or a timer expires, the round ends, and scores are tallied. This cycle repeats, allowing for long-duration testing sessions.
+The game follows a simple, repeatable loop designed for continuous data collection. In the \textbf{Lobby Phase}, users join the shared session and align their coordinate systems. During the \textbf{Round Start}, the host initiates a round, spawning a wave of drone targets. In the \textbf{Active Phase}, players use their controllers to aim and shoot lasers at the drones. Finally, in the \textbf{Round End}, once all targets are cleared, scores are tallied. This cycle repeats, allowing for long-duration testing sessions.
 
 \subsection{Calibration Protocol}
 
-The system employs an automated spatial anchor alignment procedure. First, the host device creates a spatial anchor at the center of the physical play area. This anchor is then shared via the OVR Colocation Discovery API. Finally, guest devices discover the shared anchor and align their Unity coordinate system to match the host's, ensuring the `Arena` and all game objects appear in the exact same physical location for everyone.
+The system employs an automated spatial anchor alignment procedure. First, the host device creates a spatial anchor at the center of the physical play area. This anchor is then shared via the OVR Colocation Discovery API\cite{MetaColocationDiscovery2025} and loaded as a Shared Spatial Anchor\cite{MetaSharedSpatialAnchors2025}. Finally, guest devices discover the shared anchor and align their Unity coordinate system to match the host's, ensuring the \texttt{Arena} and all game objects appear in the exact same physical location for everyone.
 
 \subsection{Data Collection}
+\label{sec:prototype-logging}
+A custom \texttt{MetricsLogger} component is included in the scene to capture real-time performance data, including network latency (RTT) as reported by Photon Fusion\cite{PhotonFusionDocs}, instantaneous and average frame rate (FPS), and calibration error measured as the Euclidean distance between the local anchor position and the shared anchor position.
+This logging pipeline allows sampling at 1Hz to support long-duration evaluation without external instrumentation. Each headset writes a per-session CSV file containing: session identifier, headset identifier, participant count, timestamp, frame rate, network latency (RTT), calibration error, battery temperature, battery level, and runtime state (e.g., host/client/not connected). In addition, a JSON metadata file is generated per session to capture device and runtime context (device model/name, Unity/app version, start/end time, duration, and total samples). To reduce data loss during long runs, logs are periodically flushed to disk and also persisted on application pause/quit; an optional on-headset debug overlay provides live visibility of the same key metrics during testing.
 
-A custom `Network Metrics` component is included in the scene to capture real-time performance data, including Network Latency (RTT) to the Photon Fusion server/host, instantaneous and average Frame Rate (FPS), and Calibration Error measured as the Euclidean distance between the local anchor position and the shared anchor position. Metrics are logged to CSV files with session metadata in JSON format, stored in the device's persistent data path for later retrieval and analysis.
+In our implementation, network latency is sampled from Photon Fusion's RTT and converted to milliseconds\cite{PhotonFusionDocs}. Participant count is recorded from the Fusion session's reported player count.
 
-% \section{Results}
-% Describe the outcome of your experiment. Discuss the success and failure of your experiments.
+
+\subsection{Meta Quest Device Setup and APK Deployment}
+\label{sec:prototype-deployment}
+To enable reproducible development and on-device testing, each Meta Quest 3 headset was configured for Android developer deployment. The setup requires enabling Developer Mode on the headset and installing the application APK through Meta Quest Developer Hub\cite{MetaMQDHGettingStarted2025}.
+All headsets must be enrolled under a Meta developer account/organization, paired through the Meta Horizon mobile app, and configured in Developer Mode to enable USB deployment. During setup, each headset prompted for USB debugging authorization, which was accepted to allow repeat installations from the development PC. APK deployment was performed through Meta Quest Developer Hub (MQDH) by verifying the headset appeared as an authorized device, installing the build from MQDH's device manager, and launching the application from the headset library. This standardized workflow reduced per-device configuration variance and enabled reproducible build deploy cycles across the three-headset testbed.
+
+This workflow supports repeated build deploy cycles for performance measurement sessions, while keeping the runtime environment consistent across the three headsets.
+
 \section{Results}
 
-This section presents the experimental validation of the 3-user co-located VR system across extended training sessions (up to 97 minutes). Results are organized by research question.
+This section presents the experimental validation of the 3-user co-located VR system during an extended co-located run. The longest continuous logging window with all three headsets active lasted 85.1 minutes (5073 samples per headset at 1Hz; 15,234 total samples across devices). The host headset additionally logged 97.0 minutes including pre-session setup and post-session tail time. Results are organized by research question.
 
-\subsection{RQ1: Technical Benchmark Achievement}
+\subsection{RQ1, RQ3 \& RQ4: Co-location Implementation, Monitoring, and Deployment}
 
-\subsubsection{Network Latency Performance}
+Implementation details for colocation, logging, and deployment are described in Sections~\ref{sec:prototype-colocation}, \ref{sec:prototype-logging}, and \ref{sec:prototype-deployment}. In summary, the prototype repeatedly established a shared coordinate system for three headsets using a host-advertised local session (group UUID) and a distributed shared spatial anchor, enabling consistent placement of the \texttt{Arena} and shared content. Continuous monitoring was achieved through on-device 1Hz logging (CSV + JSON metadata) across the full session duration. For reproducible multi-headset iteration, APK installation and launch were standardized using Meta Quest Developer Hub (MQDH) with Developer Mode enabled on each headset.
 
-Network latency measurements demonstrate achievement of Van Damme et al.'s~\cite{VanDammeSam2024Iolo} target threshold for good collaborative quality of experience (QoE $\leq$ 75ms RTT). Across all sessions, mean latency was $58.0 \pm 21.0$ms. While the mean remains within the 75ms threshold, the standard deviation reflects occasional network spikes during initialization and heavy synchronization events.
+\subsection{RQ2: Calibration Accuracy and Drift}
+
+Automated spatial anchor calibration achieved high accuracy under stationary baseline conditions. During the 85.1-minute 3-headset run, the client headset that logged non-zero calibration error reported a mean error of $1.21 \pm 0.90$mm with a maximum of 5.78mm. This remains well within Reimer et al.'s~\cite{ReimerDennis2021CfSV} $<10$mm safety-critical reference threshold for collision avoidance, supporting the feasibility of anchor-based co-location.
+
+Here, \emph{non-zero calibration error} means that the headset recorded a non-zero \emph{residual alignment error} in our logs (i.e., a non-zero Euclidean distance between the headset's local anchor position and the shared anchor position after alignment). In this run, only one headset recorded calibration error values above zero in the CSV logs.
+
+It should be noted that this drift evaluation was conducted with headsets placed stationary on a table. Consequently, these results represent a best-case baseline and may underestimate drift and transient misalignment that can occur under active user motion and re-localization events.
 
 \begin{table}[h]
 \centering
-\caption{Network Latency Performance}
-\begin{tabular}{|l|c|c|c|c|}
+\caption{Calibration Accuracy (Headset with Non-Zero Logging)}
+\begin{tabular}{|l|c|c|c|}
 \hline
-\textbf{Metric} & \textbf{Mean (ms)} & \textbf{SD} & \textbf{Min} & \textbf{Max} \\
+Metric & \textbf{Mean (mm)} & \textbf{SD} & \textbf{Max} \\
 \hline
-Overall & 58.0 & 21.0 & 0.0 & 791.4 \\
+Error & 1.21 & 0.90 & 5.78 \\
 \hline
 \end{tabular}
 \end{table}
 
-Despite occasional outliers, the system consistently maintained performance below the 75ms threshold, validating consumer wireless networking for safety-critical training applications when supported by robust error handling.
+Under these stationary conditions, calibration drift remained low over the full 85.1-minute 3-headset run, with maximum error staying well below the 10mm reference threshold.
+
+\subsection{RQ5: Feasibility Benchmarks and Long-Term Stability}
+
+\subsubsection{Network Latency Performance}
+
+Network latency measurements show that the system's \emph{mean} RTT remained below Van Damme et al.'s~\cite{VanDammeSam2024Iolo} target threshold for good collaborative quality of experience (QoE $\leq$ 75ms RTT). Over the 85.1-minute 3-headset run, mean RTT was $58.2 \pm 21.3$ms with a 95th percentile of 86.0ms. While the mean remains within the 75ms target, the tail latency exceeds it at P95 and includes occasional spikes (max 791.4ms) that occurred during initialization and synchronization events.
+
+\begin{table}[h]
+\centering
+\caption{Network Latency Performance}
+\begin{tabular}{|l|c|c|c|}
+\hline
+                    	\textbf{Metric} & \textbf{Mean (ms)} & \textbf{SD} & \textbf{P95 (ms)} \\
+\hline
+Overall & 58.2 & 21.3 & 86.0 \\
+\hline
+\end{tabular}
+\end{table}
+
+Despite occasional outliers, the system consistently maintained performance below the 75ms threshold, supporting the feasibility of consumer wireless networking for co-located collaborative training scenarios when supported by robust error handling.
 
 \subsubsection{Frame Rate Stability}
 
-Frame rate performance was evaluated against the Meta Quest 3's native 72Hz refresh rate target. The system achieved a mean frame rate of $72.2 \pm 0.7$fps. Frame rates stabilized at $72.2$--$72.3$fps during active gameplay, demonstrating consistent performance at the hardware's native target.
+Frame rate performance was evaluated against the Meta Quest 3's native 72Hz refresh rate target. The system achieved a mean frame rate of $72.2 \pm 0.7$fps. 
 
 \begin{table}[h]
 \centering
@@ -199,89 +267,64 @@ Frame rate performance was evaluated against the Meta Quest 3's native 72Hz refr
 \textbf{State} & \textbf{Frame Rate (fps)} & \textbf{Notes} \\
 \hline
 Overall Mean & $72.2 \pm 0.7$ & Stable Performance \\
-Active Gameplay & $72.2 - 72.3$ & Stable at target \\
-Min & $53.0$ & Occasional drops \\
+5th--95th Percentile & $70.9 - 73.1$ & Includes initialization variance \\
 \hline
 \end{tabular}
 \end{table}
 
-\subsubsection{Calibration Accuracy and Drift}
+Frame rates remained tightly clustered around the 72Hz target during the run, indicating stable performance under the tested load.
 
-Automated spatial anchor calibration achieved exceptional accuracy, with a mean error of $0.39 \pm 0.76$mm across all headsets. This significantly exceeds Reimer et al.'s~\cite{ReimerDennis2021CfSV} $<10$mm safety-critical threshold, validating the spatial anchor approach for precise co-location.
 
-\begin{table}[h]
-\centering
-\caption{Calibration Accuracy}
-\begin{tabular}{|l|c|c|c|}
-\hline
-\textbf{Metric} & \textbf{Mean (mm)} & \textbf{SD} & \textbf{Max} \\
-\hline
-Error & 0.39 & 0.76 & 5.78 \\
-\hline
-\end{tabular}
-\end{table}
-
-Calibration drift was minimal even over 97-minute sessions, with maximum error remaining well below the 10mm safety threshold.
-
-\subsection{RQ2 \& RQ3: Collaboration Effectiveness}
-
-\subsubsection{Task Performance}
-
-While specific WIM interface metrics were not collected in this technical validation phase, the system successfully supported 3-user co-located interaction for durations exceeding 90 minutes without technical failure. The stability of the shared coordinate system ($<1$mm error) provided a solid foundation for collaborative tasks.
-
-\subsection{RQ4: Long-Term Performance Stability}
 
 \subsubsection{Thermal Performance}
 
 Device temperature monitoring revealed consistent thermal buildup patterns. Headsets reached a maximum temperature of $52.6^{\circ}$C.
 
-Temperature correlated weakly with performance metrics:
-\begin{itemize}
-    \item Frame rate vs Temp: $r=0.15$ (Weak positive correlation)
-\end{itemize}
+Temperature correlated weakly with performance (frame rate vs. temperature: $r=0.14$).
 
-Despite significant thermal buildup, the system maintained stable performance (72fps, $<1$mm error) throughout the extended sessions, demonstrating the Quest 3's effective thermal management for long-duration training.
+Despite significant thermal buildup, the system maintained stable performance (72fps and calibration error remaining well below the 10mm threshold) throughout the extended sessions, demonstrating the Quest 3's effective thermal management for long-duration training.
 
-\subsection{Summary: Validation Against Evidence-Based Requirements}
-
-\begin{table}[H]
-\centering
-\caption{Achievement vs. Evidence-Based Benchmarks}
-\begin{tabular}{|l|c|c|c|}
-\hline
-\textbf{Requirement} & \textbf{Target} & \textbf{Achieved} & \textbf{Status} \\
-\hline
-Calibration & $<10$mm & $0.39 \pm 0.76$mm & \checkmark \\
-Network Latency & $\leq 75$ms & $58.0 \pm 21.0$ms & \checkmark \\
-Frame Rate & $72$fps & $72.2$fps (Stable) & \checkmark \\
-Session Stability & 30--60min & 97min & \checkmark \\
-\hline
-\end{tabular}
-\end{table}
 
 \section{Conclusion}
 
-This study validates consumer-grade wireless VR headsets for professional co-located training applications, demonstrating that Meta Quest 3 systems achieve enterprise-grade performance benchmarks at 15--20\% of traditional costs.
+This study demonstrates that a consumer-grade, wireless 3-user Meta Quest 3 setup can meet selected technical benchmarks relevant to co-located training in a controlled testbed.
 
 \subsection{Key Findings}
 
-The technical validation (RQ1) confirmed that the 3-user co-located system met or exceeded all evidence-based requirements. Network latency averaged $58.0 \pm 21.0$ms, remaining well within Van Damme et al.'s threshold~\cite{VanDammeSam2024Iolo} for good Quality of Experience. Automated calibration accuracy was exceptional, with a mean error of $0.39 \pm 0.76$mm, significantly surpassing Reimer et al.'s safety target~\cite{ReimerDennis2021CfSV}. Furthermore, frame rates stabilized at the native 72Hz target ($72.2$fps) throughout extended sessions. Regarding long-term stability (RQ4), thermal analysis revealed predictable performance patterns. Despite temperature increases, the system maintained stable performance for sessions exceeding 90 minutes, validating the hardware's capability for extended training durations without critical thermal throttling.
+The technical validation (RQ5) confirmed that the 3-user co-located system met the evidence-based benchmarks used as reference targets in our testbed at the \emph{mean} level. Network latency averaged $58.2 \pm 21.3$ms, remaining below Van Damme et al.'s RTT target~\cite{VanDammeSam2024Iolo} for good collaborative quality of experience, although tail latency exceeded the 75ms target at P95. Under stationary baseline conditions, calibration error remained well below Reimer et al.'s $<10$mm reference threshold~\cite{ReimerDennis2021CfSV} (mean $1.21 \pm 0.90$mm; max 5.78mm on the one headset that recorded non-zero values). Frame rate remained stable around the native 72Hz target ($72.2$fps) throughout the extended run. Regarding long-term stability (RQ5), thermal analysis showed substantial warming (max $52.6^{\circ}$C) while performance remained stable.
 
 \subsection{Practical Implications}
 
-The system demonstrates significant cost-effectiveness. At approximately \$1,500 total hardware cost (3$\times$ Quest 3 headsets) plus consumer networking equipment, it delivers 98\% of enterprise VR room capabilities at just 15--20\% of typical costs, democratizing access to high-fidelity collaborative VR training. Wireless operation offers deployment flexibility by eliminating cable management complexity, enabling training in authentic physical environments rather than dedicated VR rooms. Additionally, achieving sub-millimeter calibration accuracy provides substantial safety margins for collision prevention in co-located training scenarios.
+The system demonstrates significant cost-effectiveness. At approximately \$1,500 total headset hardware cost (3$\times$ Quest 3 headsets) plus consumer networking equipment, it enables a portable testbed for co-located collaborative VR without dedicated VR-room infrastructure. Wireless operation offers deployment flexibility by eliminating cable management complexity, enabling training in authentic physical environments rather than dedicated VR rooms. Additionally, the measured calibration error under stationary baseline conditions indicates substantial safety margin relative to the 10mm threshold used as a reference.
 
 \subsection{Limitations}
 
 While mean latency was acceptable, occasional spikes indicate the need for robust error handling in production environments to ensure network stability. Additionally, this study validated 3-user configurations; scaling to 4 or more users may introduce network congestion, potentially requiring additional infrastructure to maintain performance.
+Because the drift evaluation (RQ2) was conducted with stationary headsets, the reported millimeter-scale alignment should be treated as a best-case baseline and does not, by itself, guarantee collision safety under active user motion.
+
 
 \subsection{Future Work}
 
-Future research should systematically evaluate 4-, 5-, and 6-user configurations to determine practical upper limits for scalability. It is also crucial to conduct controlled studies comparing training outcomes between co-located VR, remote VR, and traditional methods to assess learning effectiveness.
+\subsubsection{Scalability and Infrastructure}
+Future research should systematically evaluate 4-, 5-, and 6-user configurations to determine practical upper limits for scalability. In addition to networking load, these studies should document the infrastructure assumptions required for repeatable low-latency local sessions (e.g., router placement, channel selection, and contention from other nearby devices).
+
+\subsubsection{Comparative Training Evaluation}
+To move from technical feasibility to training relevance, controlled studies should compare training outcomes between co-located VR, remote VR, and traditional instruction. For collaborative medical training in particular, structured pilot studies with medical students and clinical staff in short, repeatable scenarios can test whether co-location improves communication, role clarity, and shared situational awareness.
+
+\subsubsection{Teamwork, Safety, and Motion-Robustness}
+Future prototypes should incorporate evaluation measures aligned with teamwork and safety objectives, including task completion time, error rates, observer-assessed teamwork/communication rubrics, subjective workload, and explicit safety measures such as near-miss events and minimum inter-user distance. Importantly, calibration drift should be re-evaluated under active motion (walking, turning, repeated reach interactions) to quantify how alignment error impacts both perceived realism and collision risk.
+
+\subsubsection{Physical Realism and MR Integration}
+Purely virtual training remains limited by reduced sensory fidelity (e.g., no smell, taste, and limited high-resolution haptics). A promising direction is to combine co-located VR with lightweight physical props (e.g., tangible tools, reference surfaces, or simple mannequins) and mixed-reality set dressing so that key actions are grounded in touch, while retaining the flexibility and repeatability of virtual content.
+
+\subsubsection{Spatial Awareness and Coordination Aids}
+Finally, future work should explore spatial awareness and coordination aids tailored to co-located clinical workflows. This includes testing exocentric interfaces (e.g., world-in-miniature or map-style views) for role-based coordination, as well as procedure-specific cues that help users anticipate teammates' movements in tight spaces. These additions should be evaluated not only for usability, but also for whether they reduce collision risk without distracting from the primary clinical task.
+
 
 \subsection{Concluding Remarks}
 
 This research demonstrates that current-generation consumer VR hardware has matured to the point of viability for professional training applications. By systematically validating performance against evidence-based benchmarks, we provide a methodological framework for future co-located multi-user VR system development. The convergence of affordable standalone headsets, robust wireless networking, and sophisticated spatial tracking enables a new paradigm of portable, collaborative VR training.
+
 
 
 % Referencer (kan også gøres med .bib)
@@ -292,15 +335,16 @@ This research demonstrates that current-generation consumer VR hardware has matu
 % \textbf{Individual contribution:}
 % At the end of the report, describe the individual contribution from each team member.
 % Who developed what part of the industrial challenge and what they contributed to the task.
+
 \section*{Individual Contributions}
 
 This project was completed as part of an academic course on industrial VR applications. The following describes the individual contributions of each team member to the development and demonstration of a 3-user co-located VR system prototype.
 
 \subsection*{Jon F. Jakobsen}
-Jon F. Jakobsen focused on the core system architecture and spatial alignment implementation. He integrated Meta's OVR Colocation Discovery API to enable spatial anchor-based alignment and developed the \texttt{ColocationManager} for precise camera rig alignment and calibration error tracking. Additionally, he implemented the \texttt{MetricsLogger} system for performance data collection and configured the network infrastructure, including the Photon Fusion integration. He also contributed significantly to the technical documentation and overall system architecture design.
+Jon F. Jakobsen focused on the core system architecture and spatial alignment implementation. He integrated Meta's OVR Colocation Discovery API to enable spatial anchor-based alignment and developed the \texttt{ColocationManager} for precise camera rig alignment and calibration error tracking. Additionally, he implemented the \texttt{MetricsLogger} system for performance data collection and configured the network infrastructure. He also contributed significantly to the technical documentation and overall system architecture design.
 
 \subsection*{Kasper V. Nielsen}
-Kasper V. Nielsen was primarily responsible for the networking implementation and scene synchronization. He implemented the networking infrastructure using Photon Fusion and developed the \texttt{NetworkBehaviour} components required for synchronized objects. His work included creating demo scenarios to showcase colocation capabilities and validating the spatial anchor sharing and discovery processes. Furthermore, he contributed to system integration and the development of the interactive scenes.
+Kasper V. Nielsen was primarily responsible for session integration and scene coordination. His work included creating demo scenarios to showcase colocation capabilities and validating the spatial anchor sharing and discovery processes. Furthermore, he contributed to system integration and the development of the interactive scenes.
 
 \subsection*{Sebastian M. H. Jensen}
 Sebastian M. H. Jensen led the research and documentation efforts. He conducted the systematic literature review and evidence synthesis that grounded the project's requirements. He also developed demo scenarios to showcase colocation functionality and configured the data collection protocols and metrics tracking. His contributions extended to documenting system capabilities and technical requirements, as well as writing the Introduction and State of the Art sections.
@@ -315,8 +359,5 @@ All team members contributed equally to the system architecture design, integrat
 We declare that all team members participated actively in this project and contributed substantially to its successful completion. The work presented is original and was conducted in accordance with academic integrity standards.
 
 We further acknowledge the use of Generative AI tools throughout the project lifecycle. These tools were utilized for programming assistance, data analysis, and the retrieval of relevant materials and documentation to support the understanding and resolution of technical challenges.
-
-
-
 
 \end{document}

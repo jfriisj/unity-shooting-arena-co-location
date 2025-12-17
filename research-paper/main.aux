@@ -18,58 +18,71 @@
 \@writefile{toc}{\contentsline {section}{\numberline {I}Introduction}{1}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-A}}Motivation and Significance}{1}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {I-B}}Research Questions}{1}{}\protected@file@percent }
+\citation{SchildJonas2018E—Ev}
+\citation{HeinonenHanna2022EtBo}
 \citation{VanDammeSam2024Iolo}
 \citation{ReimerDennis2021CfSV}
 \citation{ChenLei2024Eoep}
 \citation{WeissYannick2025ItEo}
-\citation{SchildJonas2018E—Ev}
 \citation{VanDammeSam2024Iolo}
 \citation{ReimerDennis2021CfSV}
-\citation{VanDammeSam2024Iolo}
 \citation{ReimerDennis2021CfSV}
+\citation{VanDammeSam2024Iolo}
+\citation{WeissYannick2025ItEo}
 \@writefile{toc}{\contentsline {section}{\numberline {II}State of the art}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Summary of Research Gap}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-A}}Collaborative VR for training and industrial work}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-B}}Network latency and multi-user QoE}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-C}}Co-location calibration for SLAM-tracked headsets}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-D}}Spatial awareness and cross-user consistency}{2}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {II-E}}Summary of Research Gap}{2}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {III}Approach}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}System Design}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-A}1}Hardware Configuration}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-A}2}Software Architecture}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-A}3}Calibration Protocol}{2}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Illustration of the shared physical space and spatial anchor synchronization process. The host creates an anchor which is shared via the OVR Colocation Discovery API, allowing guest headsets to align their coordinate systems.}}{2}{}\protected@file@percent }
-\newlabel{fig:shared_space}{{1}{2}{}{}{}}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Research Methodology}{2}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}Assumptions and Limitations}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-A}}How the Approach Differs}{2}{}\protected@file@percent }
+\citation{VanDammeSam2024Iolo}
+\citation{ReimerDennis2021CfSV}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-B}}Design Targets (Benchmarks)}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-C}}System Design}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-C}1}Hardware Configuration}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-C}2}Software Architecture}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {III-C}3}Calibration Protocol}{3}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {1}{\ignorespaces Illustration of the shared physical space and spatial anchor synchronization process. The host creates an anchor which is shared via the OVR Colocation Discovery API, allowing guest headsets to align their coordinate systems.}}{3}{}\protected@file@percent }
+\newlabel{fig:shared_space}{{1}{3}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-D}}Research Methodology}{3}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {III-E}}Assumptions and Limitations}{3}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {section}{\numberline {IV}Experimental Prototype}{3}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-A}}Hardware Configuration}{3}{}\protected@file@percent }
 \@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-B}}Software Architecture}{3}{}\protected@file@percent }
-\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces System Architecture Diagram illustrating the data flow between Unity components, the Photon Fusion Network, and the physical Hardware layer.}}{3}{}\protected@file@percent }
-\newlabel{fig:architecture}{{2}{3}{}{}{}}
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-B}1}Key Components}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Scene Implementation: Shooting Game}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-C}1}Arena Setup}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-C}2}Gameplay Mechanics}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-C}3}Game Loop}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Calibration Protocol}{3}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}Data Collection}{3}{}\protected@file@percent }
+\@writefile{lof}{\contentsline {figure}{\numberline {2}{\ignorespaces System Architecture Diagram illustrating the data flow between Unity components, the networking layer, and the physical hardware layer.}}{4}{}\protected@file@percent }
+\newlabel{fig:architecture}{{2}{4}{}{}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-B}1}Key Components}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-C}}Scene Implementation: Shooting Game}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-C}1}Arena Setup}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-C}2}Gameplay Mechanics}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-D}}Spatial Colocation}{4}{}\protected@file@percent }
+\newlabel{sec:prototype-colocation}{{\mbox  {IV-D}}{4}{}{}{}}
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {IV-D}1}Game Loop}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-E}}Calibration Protocol}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-F}}Data Collection}{4}{}\protected@file@percent }
+\newlabel{sec:prototype-logging}{{\mbox  {IV-F}}{4}{}{}{}}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {IV-G}}Meta Quest Device Setup and APK Deployment}{4}{}\protected@file@percent }
+\newlabel{sec:prototype-deployment}{{\mbox  {IV-G}}{4}{}{}{}}
 \citation{VanDammeSam2024Iolo}
 \citation{ReimerDennis2021CfSV}
 \citation{VanDammeSam2024Iolo}
 \citation{ReimerDennis2021CfSV}
-\@writefile{toc}{\contentsline {section}{\numberline {V}Results}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}RQ1: Technical Benchmark Achievement}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {V-A}1}Network Latency Performance}{4}{}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Network Latency Performance}}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {V-A}2}Frame Rate Stability}{4}{}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Frame Rate Performance Summary}}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {V-A}3}Calibration Accuracy and Drift}{4}{}\protected@file@percent }
-\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Calibration Accuracy}}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}RQ2 \& RQ3: Collaboration Effectiveness}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {V-B}1}Task Performance}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}RQ4: Long-Term Performance Stability}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {V-C}1}Thermal Performance}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{\numberline {VI}Conclusion}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Key Findings}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}Practical Implications}{4}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Limitations}{4}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {V}Results}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-A}}RQ1: Technical Benchmark Achievement}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {V-A}1}Network Latency Performance}{5}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {I}{\ignorespaces Network Latency Performance}}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {V-A}2}Frame Rate Stability}{5}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {II}{\ignorespaces Frame Rate Performance Summary}}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {V-A}3}Calibration Accuracy and Drift}{5}{}\protected@file@percent }
+\@writefile{lot}{\contentsline {table}{\numberline {III}{\ignorespaces Calibration Accuracy (Headset with Non-Zero Logging)}}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-B}}RQ2 \& RQ3: Collaboration Effectiveness}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {V-B}1}Task Performance}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {V-C}}RQ4: Long-Term Performance Stability}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsubsection}{\numberline {\mbox  {V-C}1}Thermal Performance}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{\numberline {VI}Conclusion}{5}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-A}}Key Findings}{5}{}\protected@file@percent }
 \bibstyle{IEEEtran}
 \bibdata{references}
 \bibcite{SchildJonas2018E—Ev}{1}
@@ -79,7 +92,9 @@
 \bibcite{ReimerDennis2021CfSV}{5}
 \bibcite{ChenLei2024Eoep}{6}
 \bibcite{WeissYannick2025ItEo}{7}
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Future Work}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-E}}Concluding Remarks}{5}{}\protected@file@percent }
-\@writefile{toc}{\contentsline {section}{References}{5}{}\protected@file@percent }
-\gdef \@abspage@last{5}
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-B}}Practical Implications}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-C}}Limitations}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-D}}Future Work}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {subsection}{\numberline {\mbox  {VI-E}}Concluding Remarks}{6}{}\protected@file@percent }
+\@writefile{toc}{\contentsline {section}{References}{6}{}\protected@file@percent }
+\gdef \@abspage@last{7}

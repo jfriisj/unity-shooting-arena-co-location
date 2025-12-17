@@ -26,7 +26,7 @@ graph TD
         Runner[NetworkRunner]
     end
 
-    subgraph Network ["Photon Fusion Network"]
+    subgraph Network ["Network"]
         Cloud[Fusion Cloud / Shared Room]
         NetState[Networked State]
         RPCs[RPC Messages]
@@ -110,7 +110,7 @@ package "Unity Components (Local Client)" as Unity {
     [NetworkRunner] as Runner
 }
 
-package "Photon Fusion Network" as Network {
+package "Network" as Network {
     [Fusion Cloud / Shared Room] as Cloud
     [Networked State] as NetState
     [RPC Messages] as RPCs

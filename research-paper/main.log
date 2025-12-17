@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.12.9)  17 DEC 2025 09:38
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (MiKTeX 24.1) (preloaded format=pdflatex 2025.12.9)  17 DEC 2025 15:24
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -278,49 +278,57 @@ Package epstopdf-base Info: Redefining graphics rule for `.eps' on input line 48
  (C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex/latex/00miktex\epstopdf-sys.cfg
 File: epstopdf-sys.cfg 2021/03/18 v2.0 Configuration of epstopdf for MiKTeX
 )) (titlepage.tex) (abstract.tex) (keywords.tex) (introduction.tex
-LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 5.
+LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 4.
  (C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
 )
-LaTeX Font Info:    Trying to load font information for U+msa on input line 5.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 4.
  (C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 5.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 4.
  (C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex/latex/amsfonts\umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-LaTeX Font Info:    Trying to load font information for OML+ptm on input line 10.
+LaTeX Font Info:    Trying to load font information for OML+ptm on input line 9.
  (C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\omlptm.fd
 File: omlptm.fd 
 )
 LaTeX Font Info:    Font shape `OML/ptm/m/n' in size <10> not available
-(Font)              Font shape `OML/cmm/m/it' tried instead on input line 10.
+(Font)              Font shape `OML/cmm/m/it' tried instead on input line 9.
+
+Underfull \vbox (badness 1127) has occurred while \output is active []
+
  [1{C:/Users/jonfriis/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map}{C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc}
 
 
-]) (stateoftheart.tex) (approach.tex
-LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 13.
+]) (stateoftheart.tex) (approach.tex [2]
+LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 29.
  (C:\Users\jonfriis\AppData\Local\Programs\MiKTeX\tex/latex/psnfss\ot1pcr.fd
 File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
 )
-<figures/shared_space.png, id=12, 2794.44pt x 1541.76pt>
-File: figures/shared_space.png Graphic file (type png)
-<use figures/shared_space.png>
-Package pdftex.def Info: figures/shared_space.png  used on input line 19.
-(pdftex.def)             Requested size: 252.0pt x 139.03471pt.
-) (prototype.tex [2 <./figures/shared_space.png (PNG copy)>]
+<figures/shared_space_model.png, id=16, 769.87625pt x 410.53375pt>
+File: figures/shared_space_model.png Graphic file (type png)
+<use figures/shared_space_model.png>
+Package pdftex.def Info: figures/shared_space_model.png  used on input line 36.
+(pdftex.def)             Requested size: 252.0pt x 134.38031pt.
+) (prototype.tex
 <figures/architecture_diagram.png, id=18, 4312.11pt x 3442.8625pt>
 File: figures/architecture_diagram.png Graphic file (type png)
 <use figures/architecture_diagram.png>
 Package pdftex.def Info: figures/architecture_diagram.png  used on input line 14.
 (pdftex.def)             Requested size: 252.0pt x 201.15186pt.
-
-Underfull \hbox (badness 1515) in paragraph at lines 31--32
+ [3 <./figures/shared_space_model.png>]
+Underfull \hbox (badness 1515) in paragraph at lines 32--33
  \OT1/ptm/m/it/10 2) Game-play Me-chan-ics: [][] \OT1/ptm/m/n/10 Play-ers col-lab-o-rate to shoot
  []
 
-) (results.tex [3 <./figures/architecture_diagram.png>]) (conclusion.tex [4]) (main.bbl
+[4 <./figures/architecture_diagram.png>]) (results.tex
+Overfull \hbox (7.48581pt too wide) in paragraph at lines 34--42
+ [][] 
+ []
+
+) (conclusion.tex [5]) (main.bbl
 ** WARNING: IEEEtran.bst: No hyphenation pattern has been
 ** loaded for the language `eng'. Using the pattern for
 ** the default language instead.
@@ -363,7 +371,7 @@ Underfull \hbox (badness 1515) in paragraph at lines 31--32
 ** WARNING: IEEEtran.bst: No hyphenation pattern has been
 ** loaded for the language `eng'. Using the pattern for
 ** the default language instead.
-) (contributions.tex)
+) (contributions.tex [6])
 
 ** Conference Paper **
 Before submitting the final camera ready copy, remember to:
@@ -375,24 +383,26 @@ Before submitting the final camera ready copy, remember to:
  uses only Type 1 fonts and that every step in the generation
  process uses the appropriate paper size.
 
-[5] (main.aux)
+[7
+
+] (main.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-04>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 4459 strings out of 474486
- 72407 string characters out of 5742339
- 1946542 words of memory out of 5000000
- 26658 multiletter control sequences out of 15000+600000
+ 4462 strings out of 474486
+ 72524 string characters out of 5742339
+ 1945542 words of memory out of 5000000
+ 26661 multiletter control sequences out of 15000+600000
  598138 words of font info for 112 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 62i,9n,68p,1788b,263s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 62i,9n,68p,1700b,263s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi10.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmmi8.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr10.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmr8.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy8.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/urw/courier/ucrr8a.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmbi8a.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmr8a.pfb><C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmri8a.pfb>
-Output written on main.pdf (5 pages, 5669911 bytes).
+Output written on main.pdf (7 pages, 437445 bytes).
 PDF statistics:
- 83 PDF objects out of 1000 (max. 8388607)
+ 92 PDF objects out of 1000 (max. 8388607)
  0 named destinations out of 1000 (max. 500000)
  11 words of extra memory for PDF output out of 10000 (max. 10000000)
 

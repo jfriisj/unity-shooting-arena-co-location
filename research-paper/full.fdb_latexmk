@@ -1,13 +1,13 @@
 # Fdb version 4
-["bibtex full"] 1765960562.39793 "full.aux" "full.bbl" "full" 1765960563.70814 0
-  "./references.bib" 1765752439 25459 510dd7b1fa8328944d4c24b22d8aba31 ""
+["bibtex full"] 1765988769.53924 "full.aux" "full.bbl" "full" 1765988883.46362 0
+  "./references.bib" 1765987475 27297 9f3f9fa47a973f0d75a6f50d8f64a900 ""
   "C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/bibtex/bst/ieeetran/IEEEtran.bst" 1440622569 57748 7c8250ecf02814ce6ddc0cdbb63df1dd ""
-  "full.aux" 1765960563 6660 c722e347ebb9e8c42a1461b3dc337776 "pdflatex"
+  "full.aux" 1765988882 9160 8f3b103ff53acbc22068ac3f16fc6e41 "pdflatex"
   (generated)
   "full.bbl"
   "full.blg"
   (rewritten before read)
-["pdflatex"] 1765960562.65094 "c:/github/unity-shooting-arena-co-location/research-paper/full.tex" "full.pdf" "full" 1765960563.70869 0
+["pdflatex"] 1765988881.70677 "c:/github/unity-shooting-arena-co-location/research-paper/full.tex" "full.pdf" "full" 1765988883.46421 0
   "C:/Users/jonfriis/AppData/Local/MiKTeX/fonts/map/pdftex/pdftex.map" 1765310194 82507 a9eef8696c92627b87e9975edea03b2a ""
   "C:/Users/jonfriis/AppData/Local/MiKTeX/miktex/data/le/pdftex/pdflatex.fmt" 1765306966 24226462 13add60356699a227d5490f5fd22d49e ""
   "C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/enc/dvips/base/8r.enc" 1458473887 4993 80dc9bab7f31fb78a000ccfed0e27cab ""
@@ -44,7 +44,6 @@
   "C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy10.pfb" 1247596667 32569 5e5ddc8df908dea60932f3c484a54c0d ""
   "C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy7.pfb" 1247596666 32716 08e384dc442464e7285e891af9f45947 ""
   "C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/cm/cmsy8.pfb" 1247596667 32626 5abc8bb2f28aa647d4c70f8ea38cc0d3 ""
-  "C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/public/amsfonts/symbols/msam10.pfb" 1247596673 31764 459c573c03a4949a528c2cc7f557e217 ""
   "C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/urw/courier/ucrr8a.pfb" 1136846148 45758 19968a0990191524e34e1994d4a31cb6 ""
   "C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmb8a.pfb" 1136849748 44729 fea0975e20ec51c992338362f05f1146 ""
   "C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/fonts/type1/urw/times/utmbi8a.pfb" 1136849748 44656 0cbca70e0534538582128f6b54593cca ""
@@ -89,11 +88,12 @@
   "C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/tex/latex/psnfss/ot1ptm.fd" 1585253778 1007 15056f4a61917ceed3a44e4ac11fcc52 ""
   "C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/tex/latex/psnfss/ts1ptm.fd" 1585253778 653 96f56dc5d1ef1fe1121f1cfeec70ee0c ""
   "C:/Users/jonfriis/AppData/Local/Programs/MiKTeX/tex/latex/xcolor/xcolor.sty" 1700127522 55487 80a65caedd3722f4c20a14a69e785d8f ""
-  "c:/github/unity-shooting-arena-co-location/research-paper/full.tex" 1765753405 27839 4d511058bdd61c5dd94086c48e339847 ""
-  "full.aux" 1765960563 6660 c722e347ebb9e8c42a1461b3dc337776 "pdflatex"
-  "full.bbl" 1765960562 3474 008b0e0c83635a38b7ee977dface9a41 "bibtex full"
-  "full.tex" 1765753405 27839 4d511058bdd61c5dd94086c48e339847 ""
-  "shared_space.png" 1765753405 5314375 76b110d948a08056e2642cc4ef281a54 ""
+  "c:/github/unity-shooting-arena-co-location/research-paper/full.tex" 1765988881 38844 ddf3a406c1e3f9c68351438c024fdbd4 ""
+  "figures/architecture_diagram.png" 1765960663 545025 59732669daec8737a87d1979ff5b4db5 ""
+  "figures/shared_space_model.png" 1765978368 73450 059687e863a7e6f484d6f2d3ef682def ""
+  "full.aux" 1765988882 9160 8f3b103ff53acbc22068ac3f16fc6e41 "pdflatex"
+  "full.bbl" 1765988769 4802 9973e3693ad5b07b917e22f3cb7e015a "bibtex full"
+  "full.tex" 1765988881 38844 ddf3a406c1e3f9c68351438c024fdbd4 ""
   (generated)
   "full.aux"
   "full.log"
